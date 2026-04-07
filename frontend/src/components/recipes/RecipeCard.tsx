@@ -16,6 +16,10 @@ const TYPE_BADGE = {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const badge = TYPE_BADGE[recipe.recipe_type];
   const TypeIcon = badge?.icon;
+  // Defensive: a recipe should always have a title, but in-flight imports
+  // and bad data shouldn't crash the whole list.
+  const title = recipe.title ?? "Untitled recipe";
+  const initial = title.charAt(0).toUpperCase() || "?";
 
   return (
     <motion.div
@@ -31,13 +35,13 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           {recipe.image_url ? (
             <img
               src={recipe.image_url}
-              alt={recipe.title}
+              alt={title}
               loading="lazy"
               className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-4xl text-garnish-300">
-              {recipe.title.charAt(0).toUpperCase()}
+              {initial}
             </div>
           )}
 
@@ -51,7 +55,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
         <div className="flex flex-1 flex-col p-3">
           <h3 className="line-clamp-2 font-medium text-gray-900 group-hover:text-garnish-700">
-            {recipe.title}
+            {title}
           </h3>
 
           {(recipe.cuisine || recipe.tags.length > 0) && (

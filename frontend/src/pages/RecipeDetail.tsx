@@ -10,10 +10,12 @@ import {
   Download,
   ExternalLink,
   Timer,
+  AlertCircle,
 } from "lucide-react";
 import { getRecipe, deleteRecipe } from "@/api/recipes";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
+import { ImportProgress } from "@/components/recipes/ImportProgress";
 
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
@@ -78,6 +80,31 @@ export function RecipeDetail() {
 
   const recipe = data.data;
 
+  // In-progress or failed import: short-circuit the regular detail view.
+  // The polling progress card calls invalidate("recipe", apikey) on completion,
+  // which re-renders this page into the normal recipe view.
+  if (recipe.import_status === "importing" || recipe.import_status === "failed") {
+    return (
+      <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
+        <div className="mb-4">
+          <Link
+            to="/recipes"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Recipes
+          </Link>
+        </div>
+        <ImportProgress
+          apikey={recipe.id}
+          status={recipe.import_status}
+          sourceUrl={recipe.source_url}
+          errorMessage={recipe.import_error}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
       <div className="mb-4 flex items-center justify-between">
@@ -117,6 +144,34 @@ export function RecipeDetail() {
           </div>
         )}
       </div>
+
+      {/* Needs-review banner — shown for recipes that were imported but
+          couldn't be fully parsed (no JSON-LD, missing fields, etc.) */}
+      {recipe.import_status === "needs_review" && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <h3 className="font-medium text-amber-900">Needs your review</h3>
+              <p className="mt-1 text-sm text-amber-800">
+                We imported this recipe but couldn't extract all the details.
+                The page didn't include structured recipe data we could parse
+                automatically. Tap edit to fill in the title, ingredients, and
+                instructions.
+              </p>
+              {canEdit && (
+                <Link
+                  to={`/recipes/${recipe.id}/edit`}
+                  className="mt-3 inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit recipe
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-garnish-50 to-garnish-100">

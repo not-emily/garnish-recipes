@@ -15,6 +15,15 @@ gem "jwt", "~> 2.9"
 gem "rack-cors", "~> 2.0"
 gem "good_job", "~> 4.0"
 
+# Recipe ingestion
+gem "nokogiri", "~> 1.16"
+gem "pdf-reader", "~> 2.12"
+gem "sage-rb", "~> 0.1"
+
+# ActiveStorage with Cloudflare R2 (S3-compatible)
+gem "aws-sdk-s3", "~> 1.150", require: false
+gem "image_processing", "~> 1.13"
+
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 

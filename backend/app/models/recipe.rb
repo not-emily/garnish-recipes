@@ -7,12 +7,20 @@ class Recipe < ApplicationRecord
   DIFFICULTIES = %w[easy medium hard].freeze
   MEAL_SLOTS = %w[breakfast lunch dinner].freeze
 
+  # Import lifecycle: nil = not an import, importing = job in flight,
+  # complete = parsed cleanly, needs_review = parsed but missing fields,
+  # failed = ingestion error
+  enum :import_status, { importing: 0, complete: 1, needs_review: 2, failed: 3 }, prefix: :import
+
+  IMPORT_SOURCE_TYPES = %w[url pdf image].freeze
+
   belongs_to :household
   belongs_to :contributed_by, class_name: "User"
 
   validates :apikey, presence: true, uniqueness: true
-  validates :title, presence: true
+  validates :title, presence: true, unless: :import_in_progress?
   validates :recipe_type, inclusion: { in: RECIPE_TYPES }
+  validates :import_source_type, inclusion: { in: IMPORT_SOURCE_TYPES }, allow_nil: true
   validates :category, inclusion: { in: CATEGORIES }, allow_nil: true
   validates :difficulty, inclusion: { in: DIFFICULTIES }, allow_nil: true
   validates :servings, numericality: { greater_than: 0 }, allow_nil: true
@@ -80,8 +88,16 @@ class Recipe < ApplicationRecord
 
   def full_recipe_required_fields
     return unless recipe_type == "full"
+    # Imported recipes may parse with missing fields; the user fills them in
+    # later via the edit screen. Only enforce strict requirements for recipes
+    # that were created manually (import_status is nil).
+    return if import_status.present?
     errors.add(:category, "is required for full recipes") if category.blank?
     errors.add(:servings, "is required for full recipes") if servings.blank?
+  end
+
+  def import_in_progress?
+    import_status == "importing" || import_status == "failed"
   end
 
   def validate_ingredient_groups_structure

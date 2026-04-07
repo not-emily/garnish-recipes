@@ -92,12 +92,28 @@ export interface RecipeSummary {
   updated_at: string;
 }
 
+export type ImportStatus = "importing" | "complete" | "needs_review" | "failed";
+export type ImportSourceType = "url" | "pdf" | "image";
+
 export interface Recipe extends RecipeSummary {
   source_url?: string | null;
   notes?: string | null;
   ingredient_groups: IngredientGroup[];
   instructions: InstructionStep[];
   contributed_by: { id: string; name: string };
+  import_status?: ImportStatus | null;
+  import_source_type?: ImportSourceType | null;
+  import_error?: string | null;
+}
+
+export interface ImportSummary {
+  id: string;
+  import_status: ImportStatus;
+  import_source_type: ImportSourceType;
+  import_error?: string | null;
+  import_completed_at?: string | null;
+  source_url?: string | null;
+  title?: string | null;
 }
 
 export interface RecipeInput {

@@ -9,6 +9,13 @@ module Api
       # GET /api/v1/recipes
       def index
         scope = policy_scope(Recipe)
+        # Hide in-flight imports from the browse view — they have no title yet.
+        # Use IS DISTINCT FROM so manually-created recipes (import_status NULL)
+        # are still included; plain `where.not` would drop NULL rows.
+        scope = scope.where(
+          "import_status IS DISTINCT FROM ?",
+          Recipe.import_statuses[:importing]
+        )
         scope = filter_scope(scope)
         scope = sort_scope(scope)
 
@@ -141,6 +148,9 @@ module Api
           notes: recipe.notes,
           ingredient_groups: recipe.ingredient_groups,
           instructions: recipe.instructions,
+          import_status: recipe.import_status,
+          import_source_type: recipe.import_source_type,
+          import_error: recipe.import_error,
           contributed_by: {
             id: recipe.contributed_by.apikey,
             name: recipe.contributed_by.name
