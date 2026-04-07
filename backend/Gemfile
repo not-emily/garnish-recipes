@@ -1,0 +1,27 @@
+source "https://rubygems.org"
+
+# Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
+gem "rails", "~> 8.1.2"
+# Use postgresql as the database for Active Record
+gem "pg", "~> 1.1"
+# Use the Puma web server [https://github.com/puma/puma]
+gem "puma", ">= 5.0"
+# Build JSON APIs with ease [https://github.com/rails/jbuilder]
+# gem "jbuilder"
+
+gem "bcrypt", "~> 3.1.7"
+gem "figaro", "~> 1.2"
+gem "jwt", "~> 2.9"
+gem "rack-cors", "~> 2.0"
+gem "good_job", "~> 4.0"
+
+gem "tzinfo-data", platforms: %i[ windows jruby ]
+gem "bootsnap", require: false
+
+group :development, :test do
+  # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
+  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+
+  # Audits gems for known security defects (use config/bundler-audit.yml to ignore issues)
+  gem "bundler-audit", require: false
+end

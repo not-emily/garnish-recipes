@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-garnish-50: #f0fdf4;
+  --color-garnish-100: #dcfce7;
+  --color-garnish-200: #bbf7d0;
+  --color-garnish-300: #86efac;
+  --color-garnish-400: #4ade80;
+  --color-garnish-500: #22c55e;
+  --color-garnish-600: #16a34a;
+  --color-garnish-700: #15803d;
+  --color-garnish-800: #166534;
+  --color-garnish-900: #14532d;
+  --color-garnish-950: #052e16;
+}
+
+body {
+  @apply bg-white text-gray-900 antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

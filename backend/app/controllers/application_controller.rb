@@ -1,0 +1,61 @@
+class ApplicationController < ActionController::API
+  POLICY_CLASSES = {}.freeze
+
+  private
+
+  def current_user
+    @current_user ||= authenticate_from_token
+  end
+
+  def authenticate!
+    render json: { error: { code: "unauthorized", message: "You must be logged in" } }, status: :unauthorized unless current_user
+  end
+
+  def authenticate_from_token
+    header = request.headers["Authorization"]
+    return nil unless header&.start_with?("Bearer ")
+
+    token = header.split(" ").last
+    payload = JwtService.decode(token)
+    return nil unless payload&.dig(:user_id)
+
+    User.find_by(id: payload[:user_id])
+  end
+
+  # --- Policy authorization ---
+
+  def get_policy(record)
+    policy_class = POLICY_CLASSES[record.class.name]
+    raise "No policy defined for #{record.class.name}" unless policy_class
+    policy_class.new(current_user, record)
+  end
+
+  def authorize!(record, action = nil)
+    action ||= (action_name + "?").to_sym
+    @policy = get_policy(record)
+    policy_result = @policy.public_send(action)
+
+    unless policy_result.present? && policy_result[:allowed]
+      message = authorization_message(policy_result)
+      render json: { error: { code: "forbidden", message: message } }, status: :forbidden
+      return false
+    end
+
+    true
+  end
+
+  def authorization_message(result)
+    case result[:reason]
+    when :not_member
+      "You are not a member of this household"
+    when :not_owner
+      "Only the household owner can perform this action"
+    when :not_admin
+      "You must be an admin to perform this action"
+    when :insufficient_grocery_permission
+      "You don't have permission to modify the grocery list"
+    else
+      "Not authorized"
+    end
+  end
+end

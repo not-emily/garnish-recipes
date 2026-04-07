@@ -1,0 +1,27 @@
+# Backend
+backend/tmp/
+backend/log/
+backend/storage/
+backend/config/application.yml
+backend/.bundle/
+backend/vendor/bundle/
+
+# Dependencies
+node_modules/
+
+# Frontend
+frontend/dist/
+
+# System
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+
+# Environment
+.env
+.env.local
+backend/config/master.key

@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: garnish-pg
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: garnish
+      POSTGRES_PASSWORD: garnish
+      POSTGRES_DB: garnish_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
