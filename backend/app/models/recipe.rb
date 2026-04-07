@@ -1,0 +1,121 @@
+class Recipe < ApplicationRecord
+  RECIPE_TYPES = %w[full quick_meal event].freeze
+  CATEGORIES = %w[
+    entree side appetizer soup_stew salad
+    breakfast dessert snack beverage sauce_dressing
+  ].freeze
+  DIFFICULTIES = %w[easy medium hard].freeze
+  MEAL_SLOTS = %w[breakfast lunch dinner].freeze
+
+  belongs_to :household
+  belongs_to :contributed_by, class_name: "User"
+
+  validates :apikey, presence: true, uniqueness: true
+  validates :title, presence: true
+  validates :recipe_type, inclusion: { in: RECIPE_TYPES }
+  validates :category, inclusion: { in: CATEGORIES }, allow_nil: true
+  validates :difficulty, inclusion: { in: DIFFICULTIES }, allow_nil: true
+  validates :servings, numericality: { greater_than: 0 }, allow_nil: true
+  validates :prep_time_minutes, :cook_time_minutes, :total_time_minutes,
+            numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  validate :validate_ingredient_groups_structure
+  validate :validate_instructions_structure
+  validate :full_recipe_required_fields
+
+  before_validation :set_apikey, on: :create
+  before_validation :compute_total_time
+  before_validation :normalize_tags
+
+  scope :full_recipes, -> { where(recipe_type: "full") }
+  scope :quick_meals, -> { where(recipe_type: "quick_meal") }
+  scope :events, -> { where(recipe_type: "event") }
+  scope :by_category, ->(category) { where(category: category) if category.present? }
+  scope :by_cuisine, ->(cuisine) { where(cuisine: cuisine) if cuisine.present? }
+  scope :by_protein, ->(protein) { where(primary_protein: protein) if protein.present? }
+  scope :by_difficulty, ->(difficulty) { where(difficulty: difficulty) if difficulty.present? }
+  scope :by_type, ->(type) { where(recipe_type: type) if type.present? }
+  scope :with_tags, ->(tags) {
+    tags = Array(tags).compact_blank
+    where("tags @> ARRAY[?]::varchar[]", tags) if tags.any?
+  }
+  scope :search, ->(query) {
+    if query.present?
+      term = "%#{sanitize_sql_like(query)}%"
+      where("title ILIKE :t OR cuisine ILIKE :t OR description ILIKE :t", t: term)
+    end
+  }
+  scope :max_total_time, ->(minutes) {
+    where("total_time_minutes <= ?", minutes) if minutes.present?
+  }
+
+  def self.find_by_apikey!(apikey)
+    find_by!(apikey: apikey)
+  end
+
+  # Returns a flat list of all ingredients across all groups, used for grocery
+  # generation in Phase 7. Doesn't preserve grouping.
+  def all_ingredients
+    Array(ingredient_groups).flat_map { |group| Array(group["ingredients"]) }
+  end
+
+  private
+
+  def set_apikey
+    return if apikey.present?
+    loop do
+      self.apikey = SecureRandom.urlsafe_base64
+      break unless self.class.exists?(apikey: apikey)
+    end
+  end
+
+  def compute_total_time
+    return unless prep_time_minutes || cook_time_minutes
+    self.total_time_minutes = (prep_time_minutes || 0) + (cook_time_minutes || 0)
+  end
+
+  def normalize_tags
+    self.tags = Array(tags).map { |t| t.to_s.strip.downcase }.reject(&:blank?).uniq
+  end
+
+  def full_recipe_required_fields
+    return unless recipe_type == "full"
+    errors.add(:category, "is required for full recipes") if category.blank?
+    errors.add(:servings, "is required for full recipes") if servings.blank?
+  end
+
+  def validate_ingredient_groups_structure
+    return if ingredient_groups.blank?
+    unless ingredient_groups.is_a?(Array)
+      errors.add(:ingredient_groups, "must be an array")
+      return
+    end
+
+    ingredient_groups.each_with_index do |group, gi|
+      unless group.is_a?(Hash) && group["ingredients"].is_a?(Array)
+        errors.add(:ingredient_groups, "group #{gi} must have an ingredients array")
+        next
+      end
+
+      group["ingredients"].each_with_index do |ing, ii|
+        unless ing.is_a?(Hash) && ing["name"].is_a?(String) && ing["name"].present?
+          errors.add(:ingredient_groups, "group #{gi} ingredient #{ii} must have a name")
+        end
+      end
+    end
+  end
+
+  def validate_instructions_structure
+    return if instructions.blank?
+    unless instructions.is_a?(Array)
+      errors.add(:instructions, "must be an array")
+      return
+    end
+
+    instructions.each_with_index do |step, i|
+      unless step.is_a?(Hash) && step["text"].is_a?(String) && step["text"].present?
+        errors.add(:instructions, "step #{i} must have text")
+      end
+    end
+  end
+end

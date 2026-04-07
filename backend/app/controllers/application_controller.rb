@@ -1,7 +1,16 @@
 class ApplicationController < ActionController::API
   include ActionController::Cookies
 
-  POLICY_CLASSES = {}.freeze
+  # --- Policy registry ---
+  # Explicit allowlist of policy classes. Only classes listed here can be used
+  # for authorization (avoids unsafe reflection via .constantize).
+  POLICY_CLASSES = {
+    "Recipe" => "RecipePolicy"
+  }.freeze
+
+  POLICY_SCOPE_CLASSES = {
+    "Recipe" => "RecipePolicy::Scope"
+  }.freeze
 
   private
 
@@ -27,11 +36,17 @@ class ApplicationController < ActionController::API
   end
 
   # --- Policy authorization ---
+  #
+  # Policies are membership-aware: they take the current household membership
+  # rather than the user, because every household-scoped permission depends on
+  # the user's role within the active household. Controllers that need
+  # `authorize!` and `policy_scope` must include `HouseholdScoped` so that
+  # `Current.membership` is set before these helpers are called.
 
   def get_policy(record)
-    policy_class = POLICY_CLASSES[record.class.name]
-    raise "No policy defined for #{record.class.name}" unless policy_class
-    policy_class.new(current_user, record)
+    policy_class_name = POLICY_CLASSES[record.class.name]
+    raise "No policy defined for #{record.class.name}" unless policy_class_name
+    policy_class_name.constantize.new(Current.membership, record)
   end
 
   def authorize!(record, action = nil)
@@ -46,6 +61,14 @@ class ApplicationController < ActionController::API
     end
 
     true
+  end
+
+  # Returns a policy-filtered query for index actions.
+  # Usage: `policy_scope(Recipe)` → returns recipes the current member can see.
+  def policy_scope(scope)
+    scope_class_name = POLICY_SCOPE_CLASSES[scope.name]
+    raise "No policy scope defined for #{scope.name}" unless scope_class_name
+    scope_class_name.constantize.new(Current.membership, scope).resolve
   end
 
   def authorization_message(result)

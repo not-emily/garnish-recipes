@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_07_031143) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_07_032458) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -38,6 +38,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_031143) do
     t.index ["invite_code"], name: "index_households_on_invite_code", unique: true
   end
 
+  create_table "recipes", force: :cascade do |t|
+    t.string "apikey", null: false
+    t.string "category"
+    t.bigint "contributed_by_id", null: false
+    t.integer "cook_time_minutes"
+    t.datetime "created_at", null: false
+    t.string "cuisine"
+    t.text "description"
+    t.string "difficulty"
+    t.bigint "household_id", null: false
+    t.string "image_url"
+    t.jsonb "ingredient_groups", default: [], null: false
+    t.jsonb "instructions", default: [], null: false
+    t.date "last_cooked_at"
+    t.text "notes"
+    t.integer "prep_time_minutes"
+    t.string "primary_protein"
+    t.string "recipe_type", default: "full", null: false
+    t.integer "servings"
+    t.string "source_url"
+    t.string "tags", default: [], null: false, array: true
+    t.integer "times_cooked", default: 0, null: false
+    t.string "title", null: false
+    t.integer "total_time_minutes"
+    t.datetime "updated_at", null: false
+    t.index ["apikey"], name: "index_recipes_on_apikey", unique: true
+    t.index ["category"], name: "index_recipes_on_category"
+    t.index ["contributed_by_id"], name: "index_recipes_on_contributed_by_id"
+    t.index ["cuisine"], name: "index_recipes_on_cuisine"
+    t.index ["household_id"], name: "index_recipes_on_household_id"
+    t.index ["last_cooked_at"], name: "index_recipes_on_last_cooked_at"
+    t.index ["primary_protein"], name: "index_recipes_on_primary_protein"
+    t.index ["recipe_type"], name: "index_recipes_on_recipe_type"
+    t.index ["tags"], name: "index_recipes_on_tags", using: :gin
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "apikey", null: false
     t.datetime "created_at", null: false
@@ -52,4 +88,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_031143) do
 
   add_foreign_key "household_memberships", "households"
   add_foreign_key "household_memberships", "users"
+  add_foreign_key "recipes", "households"
+  add_foreign_key "recipes", "users", column: "contributed_by_id"
 end

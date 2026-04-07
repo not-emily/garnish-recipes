@@ -21,6 +21,13 @@ Rails.application.routes.draw do
       get "households/current/members", to: "memberships#index"
       patch "households/current/members/:id", to: "memberships#update"
       delete "households/current/members/:id", to: "memberships#destroy"
+
+      # Recipes
+      get "recipes", to: "recipes#index"
+      post "recipes", to: "recipes#create"
+      get "recipes/:apikey", to: "recipes#show"
+      patch "recipes/:apikey", to: "recipes#update"
+      delete "recipes/:apikey", to: "recipes#destroy"
     end
   end
 end

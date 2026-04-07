@@ -2,25 +2,25 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-3.md](../docs/plan/phases/phase-3.md)
+Current Phase: [phase-4.md](../docs/plan/phases/phase-4.md)
 Latest Weekly Report: None
+Latest Daily Report: [daily-2026-04-06.md](../docs/reports/daily-2026-04-06.md)
 
 Last Updated: 2026-04-06
 
 ## Current Focus
-Phase 2 complete + auth/session refactor done. Ready to begin Phase 3: Recipes Core.
+Phase 3 complete. Recipe management is fully functional. Ready to begin Phase 4: Recipe Ingestion.
 
 ## Active Tasks
-- [NEXT] Phase 3: Recipes Core — recipe CRUD, ingredient/instruction editor, browse/search, taxonomy
-  - ⏭ Recipe model with JSONB ingredients and instructions
-  - ⏭ Recipe CRUD for all types (full, quick_meal, event)
-  - ⏭ Structured ingredient editor (sections, autocomplete)
-  - ⏭ Structured instruction editor (steps, optional timers)
-  - ⏭ Recipe taxonomy (category, cuisine, tags, primary protein, time, difficulty)
-  - ⏭ Recipe browse page with search, filters, grid layout
-  - ⏭ Recipe detail page
-  - ⏭ Quick meal and event lightweight forms
-  - ⏭ Recipe export (single and bulk)
+- [NEXT] Phase 4: Recipe Ingestion — URL/PDF/image import with optional LLM enhancement
+  - ⏭ URL import with JSON-LD/Schema.org recipe extraction
+  - ⏭ PDF import with text extraction
+  - ⏭ Image import (with attachment storage)
+  - ⏭ LLM-powered extraction via sage-rb (optional, user-provided keys)
+  - ⏭ Background job processing with status updates
+  - ⏭ Encrypted user API key storage
+  - ⏭ Import UI with progress indicators
+  - ⏭ Fallback flow: store source material as attachment, manual entry
 
 ## Open Questions/Blockers
 None
@@ -87,6 +87,26 @@ None
   - Extracted useSessionLoading hook for unified route guard loading state
   - Set up minitest, wrote 17 auth tests covering signup/login/refresh/logout/type validation
   - Caught and fixed separator collision: _ in apikey conflicted with _ as token separator (now uses .)
+- [2026-04-06] Phase 3: Recipes Core
+  - Recipe model with JSONB ingredient_groups + instructions, apikey-as-id
+  - Validations: structure validation for JSONB fields, full-recipe required fields
+  - Scopes: search, by_category, by_cuisine, by_protein, by_difficulty, by_type, with_tags, max_total_time
+  - RecipePolicy with structured action methods + nested Scope class for index queries
+  - policy_scope helper added to ApplicationController (basic policy pattern from code-ref)
+  - RecipesController with full CRUD + filtering + sorting + search
+  - 20 backend controller tests covering CRUD, authorization, household scoping, search/filter
+  - Recipe TypeScript types and API client with query string builder
+  - RecipeBrowser component: search input, type chips, category chips, responsive grid
+  - Smart filter chips: only show types/categories that actually exist in the household
+  - RecipeCard with image fallback, type badge, time/servings info, animated mount
+  - RecipeDetail page: hero, taxonomy chips, ingredient sections, numbered instructions with timers, edit/export/delete
+  - RecipeNew with type selector (Recipe / Quick Meal / Event)
+  - RecipeEdit reusing the same form
+  - RecipeForm adapts to recipe_type with conditional fields
+  - IngredientEditor: structured rows with sections, up/down reordering, qty/unit/name/prep
+  - InstructionEditor: numbered steps with optional timers, up/down reordering
+  - Single recipe export as JSON via download button
+  - Quick meals support optional servings (for leftover tracking)
 
 ## Next Session
-Begin Phase 3: Recipes Core — start with the Recipe model + JSONB schema, then CRUD endpoints, then the ingredient/instruction editor.
+Begin Phase 4: Recipe Ingestion — start with URL JSON-LD parsing (free, no LLM needed), then add the background job infrastructure for PDF/image with sage-rb integration.

@@ -9,6 +9,9 @@ import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/Signup";
 import { Onboarding } from "@/pages/Onboarding";
 import { Recipes } from "@/pages/Recipes";
+import { RecipeDetail } from "@/pages/RecipeDetail";
+import { RecipeNew } from "@/pages/RecipeNew";
+import { RecipeEdit } from "@/pages/RecipeEdit";
 import { MealPlan } from "@/pages/MealPlan";
 import { GroceryList } from "@/pages/GroceryList";
 import { Settings } from "@/pages/Settings";
@@ -70,6 +73,9 @@ function AppRoutes() {
       {/* Protected routes (authenticated + has household) */}
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/recipes" element={<Recipes />} />
+        <Route path="/recipes/new" element={<RecipeNew />} />
+        <Route path="/recipes/:apikey" element={<RecipeDetail />} />
+        <Route path="/recipes/:apikey/edit" element={<RecipeEdit />} />
         <Route path="/meal-plan" element={<MealPlan />} />
         <Route path="/grocery-list" element={<GroceryList />} />
         <Route path="/settings" element={<Settings />} />
