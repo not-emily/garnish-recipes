@@ -4,6 +4,7 @@ const API_BASE = "/api/v1";
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
+let onSessionExpired: (() => void) | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -11,6 +12,16 @@ export function setAccessToken(token: string | null) {
 
 export function getAccessToken() {
   return accessToken;
+}
+
+/**
+ * Register a callback that fires when the session expires (refresh token invalid).
+ * AuthContext registers a logout-and-redirect handler so that any failed refresh
+ * — including races between multiple tabs or expired refresh tokens — sends the
+ * user cleanly to the login screen instead of leaving the UI in a half-broken state.
+ */
+export function setSessionExpiredHandler(handler: (() => void) | null) {
+  onSessionExpired = handler;
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -55,13 +66,16 @@ export async function api<T>(
     credentials: "include",
   });
 
-  // On 401, try refreshing the token once
+  // On 401, try refreshing the token once. The refreshPromise singleton
+  // ensures multiple concurrent 401s share a single refresh attempt rather
+  // than racing each other.
   if (res.status === 401 && accessToken) {
     if (!refreshPromise) {
-      refreshPromise = refreshAccessToken();
+      refreshPromise = refreshAccessToken().finally(() => {
+        refreshPromise = null;
+      });
     }
     const newToken = await refreshPromise;
-    refreshPromise = null;
 
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
@@ -70,6 +84,11 @@ export async function api<T>(
         headers,
         credentials: "include",
       });
+    } else {
+      // Refresh failed — session is dead. Trigger the registered handler
+      // (typically a logout + redirect to /login) so the user gets a clean
+      // recovery instead of a confusing 401 surfacing in some random component.
+      if (onSessionExpired) onSessionExpired();
     }
   }
 

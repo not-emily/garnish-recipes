@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
+
   POLICY_CLASSES = {}.freeze
 
   private
@@ -17,9 +19,11 @@ class ApplicationController < ActionController::API
 
     token = header.split(" ").last
     payload = JwtService.decode(token)
-    return nil unless payload&.dig(:user_id)
+    return nil unless payload
+    return nil unless payload[:type] == "access"
+    return nil unless payload[:user_apikey].present?
 
-    User.find_by(id: payload[:user_id])
+    User.find_by_apikey(payload[:user_apikey])
   end
 
   # --- Policy authorization ---
@@ -54,6 +58,10 @@ class ApplicationController < ActionController::API
       "You must be an admin to perform this action"
     when :insufficient_grocery_permission
       "You don't have permission to modify the grocery list"
+    when :cannot_modify_owner
+      "The household owner's role cannot be changed"
+    when :cannot_remove_owner
+      "The household owner cannot be removed"
     else
       "Not authorized"
     end

@@ -4,9 +4,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
-import { api, setAccessToken } from "@/api/client";
+import { api, setAccessToken, setSessionExpiredHandler } from "@/api/client";
 import type { User, ApiResponse } from "@/types";
 
 interface AuthState {
@@ -28,9 +29,16 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const restoreStarted = useRef(false);
 
-  // Try to restore session on mount via refresh token
+  // Try to restore session on mount via refresh token.
+  // Guarded with a ref so React StrictMode's double-mount in dev
+  // doesn't fire two parallel /auth/refresh calls (which would race
+  // and invalidate each other's rotated refresh tokens).
   useEffect(() => {
+    if (restoreStarted.current) return;
+    restoreStarted.current = true;
+
     async function restoreSession() {
       try {
         const res = await api<ApiResponse<{ user: User; access_token: string }>>(
@@ -96,6 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
   }, []);
+
+  // Handle session expiration triggered from the API client
+  // (e.g., refresh token rejected, multi-tab race, etc.)
+  const handleSessionExpired = useCallback(() => {
+    setAccessToken(null);
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setSessionExpiredHandler(handleSessionExpired);
+    return () => setSessionExpiredHandler(null);
+  }, [handleSessionExpired]);
 
   return (
     <AuthContext.Provider

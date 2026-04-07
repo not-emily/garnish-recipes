@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { HouseholdProvider, useHousehold } from "@/contexts/HouseholdContext";
+import { useSessionLoading } from "@/hooks/useSessionLoading";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { AppShell } from "@/components/layout/AppShell";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/Signup";
+import { Onboarding } from "@/pages/Onboarding";
 import { Recipes } from "@/pages/Recipes";
 import { MealPlan } from "@/pages/MealPlan";
 import { GroceryList } from "@/pages/GroceryList";
@@ -14,23 +17,39 @@ import type { ReactNode } from "react";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute
+      staleTime: 1000 * 60,
       retry: 1,
     },
   },
 });
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { hasHousehold } = useHousehold();
+  const isLoading = useSessionLoading();
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!hasHousehold) return <Navigate to="/onboarding" replace />;
+
+  return <>{children}</>;
+}
+
+function OnboardingRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  const { hasHousehold } = useHousehold();
+  const isLoading = useSessionLoading();
+
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (hasHousehold) return <Navigate to="/recipes" replace />;
 
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const isLoading = useSessionLoading();
 
   if (isLoading) return <LoadingScreen />;
   if (isAuthenticated) return <Navigate to="/recipes" replace />;
@@ -45,7 +64,10 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
-      {/* Protected routes */}
+      {/* Onboarding (authenticated, no household) */}
+      <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+
+      {/* Protected routes (authenticated + has household) */}
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/meal-plan" element={<MealPlan />} />
@@ -64,7 +86,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <HouseholdProvider>
+            <AppRoutes />
+          </HouseholdProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -40,5 +40,8 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Add cookie middleware back for JWT refresh tokens (httpOnly cookies)
+    config.middleware.use ActionDispatch::Cookies
   end
 end

@@ -1,22 +1,16 @@
 module Api
   module V1
     class AuthController < ApplicationController
+      REFRESH_COOKIE = :refresh_token
+      REFRESH_TOKEN_EXPIRY = 30.days
+
       before_action :authenticate!, only: [:me, :logout]
 
       def signup
         user = User.new(signup_params)
 
         if user.save
-          access_token = JwtService.encode_access_token(user)
-          refresh_token = user.generate_refresh_token!
-          set_refresh_cookie(refresh_token)
-
-          render json: {
-            data: {
-              user: serialize_user(user),
-              access_token: access_token
-            }
-          }, status: :created
+          issue_session(user, status: :created)
         else
           render json: {
             error: {
@@ -32,16 +26,7 @@ module Api
         user = User.find_by(email: login_params[:email])
 
         if user&.authenticate(login_params[:password])
-          access_token = JwtService.encode_access_token(user)
-          refresh_token = user.generate_refresh_token!
-          set_refresh_cookie(refresh_token)
-
-          render json: {
-            data: {
-              user: serialize_user(user),
-              access_token: access_token
-            }
-          }
+          issue_session(user)
         else
           render json: {
             error: { code: "invalid_credentials", message: "Invalid email or password" }
@@ -50,22 +35,11 @@ module Api
       end
 
       def refresh
-        token = cookies.signed[:refresh_token]
-        user_id = cookies.signed[:refresh_user_id]
+        token = cookies.signed[REFRESH_COOKIE]
+        user, secret = User.parse_refresh_token(token)
 
-        user = User.find_by(id: user_id)
-
-        if user&.valid_refresh_token?(token)
-          access_token = JwtService.encode_access_token(user)
-          new_refresh_token = user.generate_refresh_token!
-          set_refresh_cookie(new_refresh_token)
-
-          render json: {
-            data: {
-              user: serialize_user(user),
-              access_token: access_token
-            }
-          }
+        if user&.valid_refresh_token_secret?(secret)
+          issue_session(user)
         else
           clear_refresh_cookie
           render json: {
@@ -94,33 +68,50 @@ module Api
         params.require(:user).permit(:email, :password)
       end
 
+      # Issues a fresh access token + rotated refresh cookie for a user.
+      def issue_session(user, status: :ok)
+        access_token = JwtService.encode_access_token(user)
+        refresh_token = user.generate_refresh_token!
+        set_refresh_cookie(refresh_token)
+
+        render json: {
+          data: {
+            user: serialize_user(user),
+            access_token: access_token
+          }
+        }, status: status
+      end
+
       def set_refresh_cookie(token)
-        cookies.signed[:refresh_token] = {
-          value: token,
-          httponly: true,
-          secure: Rails.env.production?,
-          same_site: Rails.env.production? ? :none : :lax,
-          expires: 30.days.from_now
-        }
-        cookies.signed[:refresh_user_id] = {
-          value: current_user&.id || User.last.id,
-          httponly: true,
-          secure: Rails.env.production?,
-          same_site: Rails.env.production? ? :none : :lax,
-          expires: 30.days.from_now
-        }
+        cookies.signed[REFRESH_COOKIE] = cookie_options.merge(value: token)
       end
 
       def clear_refresh_cookie
-        cookies.delete(:refresh_token)
-        cookies.delete(:refresh_user_id)
+        # Mirror the same attributes used when setting the cookie. Some browsers
+        # (Safari in particular) refuse to clear a SameSite=None; Secure cookie
+        # if the deletion directive lacks those attributes.
+        cookies.delete(REFRESH_COOKIE, cookie_options.except(:expires))
+      end
+
+      def cookie_options
+        opts = {
+          httponly: true,
+          secure: Rails.env.production?,
+          same_site: Rails.env.production? ? :none : :lax,
+          path: "/",
+          expires: REFRESH_TOKEN_EXPIRY.from_now
+        }
+        domain = ENV["COOKIE_DOMAIN"].presence
+        opts[:domain] = domain if domain
+        opts
       end
 
       def serialize_user(user)
         {
-          id: user.id,
+          id: user.apikey,
           email: user.email,
           name: user.name,
+          has_household: user.active_household.present?,
           created_at: user.created_at
         }
       end

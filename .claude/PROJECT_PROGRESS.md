@@ -2,24 +2,25 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-2.md](../docs/plan/phases/phase-2.md)
+Current Phase: [phase-3.md](../docs/plan/phases/phase-3.md)
 Latest Weekly Report: None
 
 Last Updated: 2026-04-06
 
 ## Current Focus
-Phase 1 complete. Ready to begin Phase 2: Households.
+Phase 2 complete + auth/session refactor done. Ready to begin Phase 3: Recipes Core.
 
 ## Active Tasks
-- [NEXT] Phase 2: Households — multi-tenancy, roles, onboarding
-  - ⏭ Household model and migrations
-  - ⏭ HouseholdMembership model with roles (owner/admin/member)
-  - ⏭ Household CRUD controller + settings
-  - ⏭ Invite system (invite codes, join flow)
-  - ⏭ Post-signup onboarding (create or join household)
-  - ⏭ HouseholdScoped concern for controller scoping
-  - ⏭ Authorization policies for household actions
-  - ⏭ Frontend: onboarding flow, household settings, member management
+- [NEXT] Phase 3: Recipes Core — recipe CRUD, ingredient/instruction editor, browse/search, taxonomy
+  - ⏭ Recipe model with JSONB ingredients and instructions
+  - ⏭ Recipe CRUD for all types (full, quick_meal, event)
+  - ⏭ Structured ingredient editor (sections, autocomplete)
+  - ⏭ Structured instruction editor (steps, optional timers)
+  - ⏭ Recipe taxonomy (category, cuisine, tags, primary protein, time, difficulty)
+  - ⏭ Recipe browse page with search, filters, grid layout
+  - ⏭ Recipe detail page
+  - ⏭ Quick meal and event lightweight forms
+  - ⏭ Recipe export (single and bulk)
 
 ## Open Questions/Blockers
 None
@@ -54,6 +55,38 @@ None
   - GitHub Actions: test workflow + backend deploy via Tailscale SSH
   - Procfile.dev for local development (foreman)
   - Deploy script (scripts/deploy-backend.sh)
+- [2026-04-06] Phase 2: Households
+  - Household model with auto-generated invite codes (food-themed: SAUTE-SAGE-84)
+  - HouseholdMembership model with roles (owner/admin/member) and grocery permissions (read/contribute/full)
+  - User associations: active_household, membership_for
+  - Current attributes for request-scoped household context
+  - HouseholdScoped concern for auto-scoping controllers
+  - HouseholdPolicy and MembershipPolicy (advanced policy pattern)
+  - Households controller: create, join, show, update, regenerate invite
+  - Memberships controller: list, update role/permissions, remove
+  - Frontend HouseholdContext for active household state
+  - Onboarding page (create or join household)
+  - Route guards: unauth → login, no household → onboarding, has household → app
+  - InviteFlow component with copy + regenerate buttons
+  - HouseholdSettings (name, diners, leftover preferences)
+  - MemberList with role/permission management
+  - Settings page with all household management sections
+- [2026-04-06] Auth/session layer audit and refactor
+  - Ran project-auditor agent for deep review of auth layer
+  - Audit verdict: B-, sound architecture, polish needed
+  - Added apikey column to User (urlsafe_base64, backfilled, exposed as `id` in API)
+  - Refactored refresh token format: <apikey>.<random>, single cookie (dropped refresh_user_id)
+  - JWT payload uses user_apikey + type validation (defense in depth)
+  - Extracted shared cookie_options helper (set + clear use same attributes)
+  - Added COOKIE_DOMAIN env var for production cross-subdomain support
+  - Fixed clear_refresh_cookie to mirror SameSite=None; Secure (Safari logout bug)
+  - JWT_SECRET length validation (32+ chars)
+  - Fixed HouseholdContext race condition (waits for authLoading to settle)
+  - Frontend client.ts: setSessionExpiredHandler triggers clean logout on refresh failure
+  - Fixed refreshPromise deduplication bug (was being nulled before await resolved)
+  - Extracted useSessionLoading hook for unified route guard loading state
+  - Set up minitest, wrote 17 auth tests covering signup/login/refresh/logout/type validation
+  - Caught and fixed separator collision: _ in apikey conflicted with _ as token separator (now uses .)
 
 ## Next Session
-Begin Phase 2: Households — start with backend models, migrations, and the household scoping concern.
+Begin Phase 3: Recipes Core — start with the Recipe model + JSONB schema, then CRUD endpoints, then the ingredient/instruction editor.

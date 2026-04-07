@@ -1,14 +1,13 @@
 class JwtService
   ALGORITHM = "HS256"
   ACCESS_TOKEN_EXPIRY = 15.minutes
-  REFRESH_TOKEN_EXPIRY = 30.days
 
   class << self
     def encode_access_token(user)
       payload = {
-        user_id: user.id,
-        exp: ACCESS_TOKEN_EXPIRY.from_now.to_i,
-        type: "access"
+        user_apikey: user.apikey,
+        type: "access",
+        exp: ACCESS_TOKEN_EXPIRY.from_now.to_i
       }
       JWT.encode(payload, secret, ALGORITHM)
     end
@@ -25,7 +24,9 @@ class JwtService
     private
 
     def secret
-      ENV.fetch("JWT_SECRET")
+      key = ENV.fetch("JWT_SECRET")
+      raise "JWT_SECRET must be at least 32 characters" if key.length < 32
+      key
     end
   end
 end

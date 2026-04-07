@@ -3,11 +3,24 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      # Auth
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
       delete "auth/logout", to: "auth#logout"
       get "auth/me", to: "auth#me"
+
+      # Households
+      post "households", to: "households#create"
+      post "households/join", to: "households#join"
+      get "households/current", to: "households#show"
+      patch "households/current", to: "households#update"
+      post "households/current/regenerate_invite", to: "households#regenerate_invite"
+
+      # Members
+      get "households/current/members", to: "memberships#index"
+      patch "households/current/members/:id", to: "memberships#update"
+      delete "households/current/members/:id", to: "memberships#destroy"
     end
   end
 end
