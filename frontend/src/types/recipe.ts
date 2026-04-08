@@ -145,4 +145,5 @@ export interface RecipeFilters {
   tags?: string[];
   max_time?: number;
   sort?: "title" | "recently_cooked" | "prep_time" | "updated_at";
+  limit?: number;
 }

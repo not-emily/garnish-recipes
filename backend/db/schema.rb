@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_08_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_08_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -157,6 +157,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_08_000001) do
     t.index ["invite_code"], name: "index_households_on_invite_code", unique: true
   end
 
+  create_table "meal_plan_entries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "date", null: false
+    t.integer "diners_override"
+    t.boolean "include_in_grocery", default: true, null: false
+    t.boolean "is_leftover", default: false, null: false
+    t.bigint "leftover_of_id"
+    t.integer "leftover_servings"
+    t.bigint "meal_plan_id", null: false
+    t.string "meal_slot", null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "recipe_id"
+    t.integer "servings_override"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.index ["leftover_of_id"], name: "index_meal_plan_entries_on_leftover_of_id"
+    t.index ["meal_plan_id", "date", "meal_slot"], name: "idx_meal_plan_entries_on_slot"
+    t.index ["meal_plan_id"], name: "index_meal_plan_entries_on_meal_plan_id"
+    t.index ["recipe_id"], name: "index_meal_plan_entries_on_recipe_id"
+  end
+
+  create_table "meal_plans", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "household_id", null: false
+    t.datetime "updated_at", null: false
+    t.date "week_start", null: false
+    t.index ["household_id", "week_start"], name: "index_meal_plans_on_household_id_and_week_start", unique: true
+    t.index ["household_id"], name: "index_meal_plans_on_household_id"
+  end
+
   create_table "recipes", force: :cascade do |t|
     t.string "apikey", null: false
     t.string "category"
@@ -217,6 +247,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_08_000001) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "household_memberships", "households"
   add_foreign_key "household_memberships", "users"
+  add_foreign_key "meal_plan_entries", "meal_plan_entries", column: "leftover_of_id"
+  add_foreign_key "meal_plan_entries", "meal_plans"
+  add_foreign_key "meal_plan_entries", "recipes"
+  add_foreign_key "meal_plans", "households"
   add_foreign_key "recipes", "households"
   add_foreign_key "recipes", "users", column: "contributed_by_id"
 end

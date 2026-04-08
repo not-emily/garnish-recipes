@@ -2,17 +2,52 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-4.md](../docs/plan/phases/phase-4.md)
+Current Phase: [phase-5.md](../docs/plan/phases/phase-5.md)
 Latest Weekly Report: None
 Latest Daily Report: [daily-2026-04-06.md](../docs/reports/daily-2026-04-06.md)
 
 Last Updated: 2026-04-08
 
 ## Current Focus
-Phase 4: Recipe Ingestion is functionally complete except for image/vision support (deferred until sage-rb grows a multi-modal content API). Both sub-phases shipped end-to-end: the URL gold path (JSON-LD/microdata/Open Graph) and the LLM-enhanced path (sage-rb for HTML fallback + PDF extraction, encrypted user API keys, test-connection UX, ActiveStorage with local/R2 backends). Next up: pick the next phase from the roadmap (likely Phase 5: Meal Planning).
+Phase 5: Meal Planning — sub-phases A (core CRUD grid) and B (entry types + per-entry settings) are shipped and working end-to-end on desktop/tablet, with Recipe/Event/Note tabs in the entry picker, quick-meal creation inline, and the needs-hover-style meatball menu. Sub-phases C (mobile swipe view + drag-and-drop reordering) and D (ActionCable real-time sync) are still pending.
 
 ## Active Tasks
-- [NEXT] Phase 5: Meal Planning — weekly plan grid, slot entries (recipe/quick/event/note), drag/drop, leftover automation
+- [IN PROGRESS] Phase 5: Meal Planning
+  - ✓ Sub-phase A: Core CRUD grid (desktop/tablet)
+    - ✓ MealPlan + MealPlanEntry models, migration, lazy per-week creation, Monday canonicalization
+    - ✓ MealPlansController + MealPlanPolicy (all household members can CRUD — collaborative workspace, not admin-gated)
+    - ✓ Routes: show/create/update/destroy/reorder
+    - ✓ 17 new backend tests (auto-create, canonicalization, CRUD, scoping, position, reorder, cross-household protection)
+    - ✓ Frontend types, api client, useMealPlan hook with TanStack Query cache patching
+    - ✓ Weekly grid UI: WeekView, DayColumn, MealSlot, MealEntry with today-accent and responsive grid
+    - ✓ Week navigation (prev/today/next) with formatted week range header
+    - ✓ Pure date helpers (lib/weekUtils) — dependency-free, local-timezone parsing
+  - ✓ Sub-phase B: Entry variety + per-entry settings + UX polish
+    - ✓ EntryPicker with Recipe/Event/Note tabs (3 tabs, not 4 — quick meals live inside Recipe tab with pill filter)
+    - ✓ Recipe tab: search + pill filter (All/Recipes/Quick meals), events filtered out of default browse
+    - ✓ Quick meal inline creation with category/servings/primary protein (quick meals live in the library for reuse)
+    - ✓ Event tab: browse past 5 events (capped via backend limit param), "Create <search>" with title pre-fill
+    - ✓ Note tab: freeform title, recipe_id null
+    - ✓ EntryOptions modal with simplified variant for events/notes (no servings/grocery for non-cooked entries)
+    - ✓ Backend coerces include_in_grocery: false for events/notes via before_validation (Phase 7 grocery gen can just filter by the flag)
+    - ✓ Derived grocery_relevant? helper on MealPlanEntry, exposed in serializer
+    - ✓ Main RecipeBrowser hides events entirely — events are meal-plan-only
+    - ✓ Recipes index `limit` param with 200-row ceiling
+    - ✓ Context-aware back button — Meal Plan ← from recipe detail when arrived via meal plan link, Recipes ← otherwise, via React Router location.state
+    - ✓ Meatball menu visibility: hidden-at-rest-on-desktop / always-on-touch using runtime matchMedia (hook useMediaQuery) — Tailwind v4 arbitrary variant parser didn't reliably accept the combined `(min-width: 1024px) and (hover: hover)` media query, so JS is more reliable
+    - ✓ Rules-of-Hooks fix in EntryPicker (useQuery was after a conditional early-return → white screen on create)
+    - ✓ placeholderData: keepPreviousData on search queries to prevent flicker on every keystroke
+    - ✓ 3 new tests for grocery coercion (events forced false, notes forced false, recipes kept true) — 130/130 passing
+  - ⏭ Sub-phase C: Mobile experience + drag-and-drop
+    - ⏭ Mobile single-day swipe view (Framer Motion gesture) — replaces the current 1-column fallback
+    - ⏭ @dnd-kit/core install + drag-and-drop reordering within slots
+    - ⏭ Drag-and-drop moving entries between slots / days
+    - ⏭ Tap-to-move on mobile (long-press → highlight → tap destination)
+  - ⏭ Sub-phase D: Real-time sync via ActionCable
+    - ⏭ Enable action_cable/engine in application.rb
+    - ⏭ MealPlanChannel with per-household subscription, broadcasts on CRUD
+    - ⏭ Frontend subscription in useMealPlan — merge remote updates into the TanStack cache
+    - ⏭ Tests for channel authorization and broadcast payloads
 - [NEXT] Follow-up: Image ingestion via vision (deferred from Phase 4)
   - ⏭ Upstream multi-modal content support to sage-rb (Option C from the sub-phase B decision)
   - ⏭ ImageIngester that renders PDF pages → images for scanned cookbooks, and handles direct image uploads
@@ -158,4 +193,4 @@ None
   - Verified end-to-end against real URLs: Smitten Kitchen microdata partial now completes via LLM, Tastefully Simple no-structured-data completes via LLM, NYT/Serious Eats still complete via free JSON-LD path (no unnecessary LLM spend)
 
 ## Next Session
-Phase 5: Meal Planning. See docs/plan/phases/phase-5.md for the full scope — weekly grid, meal slots supporting multiple entries per slot, leftover automation based on household preferences, drag-and-drop (Framer Motion), real-time sync across household members via ActionCable. Revisit deferred Phase 4 follow-ups (image/vision, source attachment UI) as polish items once the next critical-path phase is in.
+Phase 5 sub-phase C (mobile swipe view + @dnd-kit drag-and-drop) and sub-phase D (ActionCable real-time sync). After that, Phase 6 (leftover automation — the columns and household settings are already in place from Phase 5's migration, just need the UI and logic).

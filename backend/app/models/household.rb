@@ -2,6 +2,7 @@ class Household < ApplicationRecord
   has_many :household_memberships, dependent: :destroy
   has_many :members, through: :household_memberships, source: :user
   has_many :recipes, dependent: :destroy
+  has_many :meal_plans, dependent: :destroy
 
   validates :name, presence: true
   validates :invite_code, presence: true, uniqueness: true

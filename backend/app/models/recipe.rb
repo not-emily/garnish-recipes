@@ -16,6 +16,7 @@ class Recipe < ApplicationRecord
 
   belongs_to :household
   belongs_to :contributed_by, class_name: "User"
+  has_many :meal_plan_entries, dependent: :destroy
 
   # Original source material for an imported recipe — the PDF or image the
   # user uploaded, attached so they can re-reference or re-process it later.

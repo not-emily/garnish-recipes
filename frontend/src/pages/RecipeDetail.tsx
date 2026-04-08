@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, useNavigate, useLocation, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -20,11 +20,21 @@ import { ImportProgress } from "@/components/recipes/ImportProgress";
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { household } = useHousehold();
 
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
+
+  // Referrer-aware back link. When the user clicked into this page from the
+  // meal plan, sending them "back to Recipes" fights their autopilot — send
+  // them back to Meal Plan instead. Other entry points (direct link, main
+  // recipe browser, bookmark, refresh) fall through to the default.
+  const backLink =
+    (location.state as { from?: string } | null)?.from === "mealPlan"
+      ? { to: "/meal-plan", label: "Meal Plan" }
+      : { to: "/recipes", label: "Recipes" };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["recipe", apikey],
@@ -71,8 +81,8 @@ export function RecipeDetail() {
     return (
       <div className="mx-auto max-w-3xl px-4 pt-6">
         <p className="text-sm text-gray-500">Couldn't load this recipe.</p>
-        <Link to="/recipes" className="text-sm text-garnish-600 hover:underline">
-          ← Back to recipes
+        <Link to={backLink.to} className="text-sm text-garnish-600 hover:underline">
+          ← Back to {backLink.label}
         </Link>
       </div>
     );
@@ -88,11 +98,11 @@ export function RecipeDetail() {
       <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
         <div className="mb-4">
           <Link
-            to="/recipes"
+            to={backLink.to}
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Recipes
+            {backLink.label}
           </Link>
         </div>
         <ImportProgress
@@ -109,11 +119,11 @@ export function RecipeDetail() {
     <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
       <div className="mb-4 flex items-center justify-between">
         <Link
-          to="/recipes"
+          to={backLink.to}
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Recipes
+          {backLink.label}
         </Link>
 
         {canEdit && (

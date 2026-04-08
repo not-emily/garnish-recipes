@@ -12,6 +12,7 @@ function buildQueryString(filters: RecipeFilters): string {
   if (filters.difficulty) params.set("difficulty", filters.difficulty);
   if (filters.max_time) params.set("max_time", String(filters.max_time));
   if (filters.sort) params.set("sort", filters.sort);
+  if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.tags?.length) {
     filters.tags.forEach((t) => params.append("tags[]", t));
   }

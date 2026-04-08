@@ -5,11 +5,13 @@ class ApplicationController < ActionController::API
   # Explicit allowlist of policy classes. Only classes listed here can be used
   # for authorization (avoids unsafe reflection via .constantize).
   POLICY_CLASSES = {
-    "Recipe" => "RecipePolicy"
+    "Recipe" => "RecipePolicy",
+    "MealPlan" => "MealPlanPolicy"
   }.freeze
 
   POLICY_SCOPE_CLASSES = {
-    "Recipe" => "RecipePolicy::Scope"
+    "Recipe" => "RecipePolicy::Scope",
+    "MealPlan" => "MealPlanPolicy::Scope"
   }.freeze
 
   private

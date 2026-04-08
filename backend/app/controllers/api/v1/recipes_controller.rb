@@ -16,13 +16,28 @@ module Api
           "import_status IS DISTINCT FROM ?",
           Recipe.import_statuses[:importing]
         )
+        # Events aren't "recipes" in the library sense — they're meal plan
+        # annotations ("dinner at mom's") stored in the recipes table for
+        # reuse. Hide them from the default browse view. Callers that need
+        # them (the meal plan event picker) pass recipe_type=event explicitly.
+        scope = scope.where.not(recipe_type: "event") unless params[:recipe_type] == "event"
         scope = filter_scope(scope)
         scope = sort_scope(scope)
+
+        # Optional row cap — used by the meal plan event picker so a
+        # household with hundreds of past events doesn't dump them all
+        # into the bottom sheet. Clamp to a sane ceiling so a pathological
+        # client can't request a million rows.
+        total = scope.size
+        if params[:limit].present?
+          limit = params[:limit].to_i.clamp(1, 200)
+          scope = scope.limit(limit)
+        end
 
         # Always allow index — policy_scope already filters out non-members
         render json: {
           data: scope.map { |r| serialize_recipe(r) },
-          meta: { total: scope.size }
+          meta: { total: total }
         }
       end
 

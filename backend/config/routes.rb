@@ -37,6 +37,15 @@ Rails.application.routes.draw do
       get "user/settings", to: "user_settings#show"
       patch "user/settings", to: "user_settings#update"
       post "user/settings/test_llm", to: "user_settings#test_llm"
+
+      # Meal plans — one plan per (household, week_start). The :week_start
+      # param is any date within the target week; the controller canonicalises
+      # it to the Monday.
+      get    "meal_plans/:week_start",                  to: "meal_plans#show"
+      post   "meal_plans/:week_start/entries",          to: "meal_plans#create_entry"
+      patch  "meal_plans/:week_start/entries/:id",      to: "meal_plans#update_entry"
+      delete "meal_plans/:week_start/entries/:id",      to: "meal_plans#destroy_entry"
+      post   "meal_plans/:week_start/entries/reorder",  to: "meal_plans#reorder_entries"
     end
   end
 end

@@ -6,11 +6,12 @@ import { RECIPE_CATEGORIES } from "@/types/recipe";
 import type { RecipeFilters, RecipeType } from "@/types/recipe";
 import { RecipeCard } from "./RecipeCard";
 
+// Events aren't surfaced in the main library — they only exist as meal
+// plan annotations. The meal plan picker has its own Event tab.
 const TYPE_FILTERS: { value: RecipeType | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "full", label: "Recipes" },
   { value: "quick_meal", label: "Quick Meals" },
-  { value: "event", label: "Events" },
 ];
 
 export function RecipeBrowser() {
