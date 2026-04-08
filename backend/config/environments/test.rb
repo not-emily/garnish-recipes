@@ -31,6 +31,10 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
+  # Use the disk service rooted in tmp/storage so tests don't pollute the
+  # development storage directory or hit the network.
+  config.active_storage.service = :test
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 

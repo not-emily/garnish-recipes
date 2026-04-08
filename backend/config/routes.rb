@@ -32,6 +32,11 @@ Rails.application.routes.draw do
       # Recipe imports
       post "imports", to: "imports#create"
       get "imports/:apikey", to: "imports#show"
+
+      # User settings (LLM credentials, etc)
+      get "user/settings", to: "user_settings#show"
+      patch "user/settings", to: "user_settings#update"
+      post "user/settings/test_llm", to: "user_settings#test_llm"
     end
   end
 end

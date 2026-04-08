@@ -40,6 +40,10 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
+  # Store uploaded files (recipe source PDFs/images) in Cloudflare R2.
+  # Falls back to local disk if R2 credentials aren't configured yet.
+  config.active_storage.service = ENV["CLOUDFLARE_R2_ACCESS_KEY_ID"].present? ? :cloudflare_r2 : :local
+
   # Replace the default in-process memory cache store with a durable alternative.
   # config.cache_store = :mem_cache_store
 

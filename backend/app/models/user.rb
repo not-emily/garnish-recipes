@@ -1,5 +1,12 @@
 class User < ApplicationRecord
+  LLM_PROVIDERS = %w[anthropic openai ollama].freeze
+
   has_secure_password
+
+  # User-supplied LLM API key, stored encrypted at rest. Garnish never logs
+  # this and never returns it in API responses — only `has_llm_credentials?`
+  # is exposed to the frontend.
+  encrypts :llm_api_key
 
   has_many :household_memberships, dependent: :destroy
   has_many :households, through: :household_memberships
@@ -8,6 +15,12 @@ class User < ApplicationRecord
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :name, presence: true
   validates :apikey, presence: true, uniqueness: true
+  validates :llm_provider, inclusion: { in: LLM_PROVIDERS }, allow_nil: true
+
+  # All three LLM fields are optional, but if any one is set the others must
+  # be set too — a half-configured key is worse than none at all because the
+  # ingestion code would otherwise hit a confusing nil dereference.
+  validate :llm_settings_complete_or_empty
 
   normalizes :email, with: ->(email) { email.strip.downcase }
 
@@ -72,6 +85,12 @@ class User < ApplicationRecord
     [user, secret]
   end
 
+  # --- LLM credentials ---
+
+  def has_llm_credentials?
+    llm_provider.present? && llm_api_key.present? && llm_model.present?
+  end
+
   private
 
   def set_apikey
@@ -80,5 +99,11 @@ class User < ApplicationRecord
       self.apikey = SecureRandom.urlsafe_base64
       break unless self.class.exists?(apikey: apikey)
     end
+  end
+
+  def llm_settings_complete_or_empty
+    fields = [ llm_provider, llm_api_key, llm_model ]
+    return if fields.all?(&:blank?) || fields.all?(&:present?)
+    errors.add(:base, "LLM provider, API key, and model must all be set together")
   end
 end

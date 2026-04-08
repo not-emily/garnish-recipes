@@ -3,6 +3,7 @@ import { useHousehold } from "@/contexts/HouseholdContext";
 import { HouseholdSettings } from "@/components/household/HouseholdSettings";
 import { MemberList } from "@/components/household/MemberList";
 import { InviteFlow } from "@/components/household/InviteFlow";
+import { ApiKeyForm } from "@/components/settings/ApiKeyForm";
 
 export function Settings() {
   const { user, logout } = useAuth();
@@ -46,6 +47,14 @@ export function Settings() {
           <MemberList />
         </section>
       )}
+
+      {/* Recipe extraction (LLM API keys) */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
+          Recipe import
+        </h2>
+        <ApiKeyForm />
+      </section>
 
       {/* Sign out */}
       <section>

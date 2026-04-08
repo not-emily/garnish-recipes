@@ -17,6 +17,11 @@ class Recipe < ApplicationRecord
   belongs_to :household
   belongs_to :contributed_by, class_name: "User"
 
+  # Original source material for an imported recipe — the PDF or image the
+  # user uploaded, attached so they can re-reference or re-process it later.
+  # URL imports don't have an attachment (the source_url string is enough).
+  has_one_attached :source_file
+
   validates :apikey, presence: true, uniqueness: true
   validates :title, presence: true, unless: :import_in_progress?
   validates :recipe_type, inclusion: { in: RECIPE_TYPES }

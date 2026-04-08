@@ -51,8 +51,12 @@ export async function api<T>(
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
 
+  // Default to JSON, but for FormData uploads let the browser set its own
+  // multipart/form-data Content-Type (including the boundary). Setting it
+  // ourselves would break the upload.
+  const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
 

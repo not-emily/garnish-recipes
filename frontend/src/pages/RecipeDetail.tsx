@@ -146,7 +146,7 @@ export function RecipeDetail() {
       </div>
 
       {/* Needs-review banner — shown for recipes that were imported but
-          couldn't be fully parsed (no JSON-LD, missing fields, etc.) */}
+          couldn't be fully parsed (no JSON-LD, missing fields, image-only PDF, etc.) */}
       {recipe.import_status === "needs_review" && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
@@ -154,10 +154,9 @@ export function RecipeDetail() {
             <div className="flex-1">
               <h3 className="font-medium text-amber-900">Needs your review</h3>
               <p className="mt-1 text-sm text-amber-800">
-                We imported this recipe but couldn't extract all the details.
-                The page didn't include structured recipe data we could parse
-                automatically. Tap edit to fill in the title, ingredients, and
-                instructions.
+                {recipe.import_error
+                  ? recipe.import_error
+                  : "We imported this recipe but couldn't extract all the details. Tap edit to fill in the missing fields."}
               </p>
               {canEdit && (
                 <Link

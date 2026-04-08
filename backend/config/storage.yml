@@ -1,0 +1,23 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Cloudflare R2 (S3-compatible). Set CLOUDFLARE_R2_ACCESS_KEY_ID,
+# CLOUDFLARE_R2_SECRET_ACCESS_KEY, CLOUDFLARE_R2_BUCKET, and
+# CLOUDFLARE_R2_ACCOUNT_ID in production application.yml. The endpoint
+# follows the pattern: https://<account-id>.r2.cloudflarestorage.com
+#
+# R2 free tier: 10 GB storage, 1M Class A ops/month, 10M Class B ops/month,
+# zero egress. For a personal recipe app this is comfortably within limits.
+cloudflare_r2:
+  service: S3
+  access_key_id: <%= ENV["CLOUDFLARE_R2_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["CLOUDFLARE_R2_SECRET_ACCESS_KEY"] %>
+  bucket: <%= ENV["CLOUDFLARE_R2_BUCKET"] %>
+  endpoint: <%= "https://#{ENV["CLOUDFLARE_R2_ACCOUNT_ID"]}.r2.cloudflarestorage.com" if ENV["CLOUDFLARE_R2_ACCOUNT_ID"].present? %>
+  region: auto
+  force_path_style: true

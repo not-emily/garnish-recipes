@@ -21,10 +21,13 @@ class RecipeIngestionJob < ApplicationJob
 
     case recipe.import_source_type
     when "url"
-      ingest_url(recipe)
-    when "pdf", "image"
-      # TODO: Phase 4 part 2 — sage-rb extraction
-      mark_failed(recipe, "PDF/image ingestion not yet implemented")
+      ingest(recipe) { RecipeIngestion::UrlIngester.call(recipe.source_url, user: recipe.contributed_by) }
+    when "pdf"
+      ingest(recipe) { RecipeIngestion::PdfIngester.call(recipe) }
+    when "image"
+      # TODO: vision support — pending sage-rb image API. Until then,
+      # the source image is attached but not auto-parsed.
+      mark_failed(recipe, "Image ingestion not yet implemented")
     else
       mark_failed(recipe, "Unknown import_source_type: #{recipe.import_source_type.inspect}")
     end
@@ -32,8 +35,10 @@ class RecipeIngestionJob < ApplicationJob
 
   private
 
-  def ingest_url(recipe)
-    result = RecipeIngestion::UrlIngester.call(recipe.source_url)
+  # Common ingestion flow: call the per-source-type ingester and apply
+  # whatever it returned to the recipe row.
+  def ingest(recipe)
+    result = yield
 
     case result[:status]
     when :complete
@@ -47,6 +52,7 @@ class RecipeIngestionJob < ApplicationJob
       # something derivable if the parser didn't find one.
       recipe.title = recipe.title.presence || derive_fallback_title(recipe.source_url)
       recipe.import_status = :needs_review
+      recipe.import_error = result[:error]  # nil for clean partial parses, set for explained ones
       recipe.import_completed_at = Time.current
       recipe.save!
     when :failed

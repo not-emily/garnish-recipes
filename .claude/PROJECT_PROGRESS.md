@@ -6,39 +6,20 @@ Current Phase: [phase-4.md](../docs/plan/phases/phase-4.md)
 Latest Weekly Report: None
 Latest Daily Report: [daily-2026-04-06.md](../docs/reports/daily-2026-04-06.md)
 
-Last Updated: 2026-04-07
+Last Updated: 2026-04-08
 
 ## Current Focus
-Phase 4: Recipe Ingestion — Sub-phase A (URL gold path) is complete and working end-to-end. Three extractors layered (JSON-LD, microdata, Open Graph), background job pipeline shipped, frontend import flow shipped with progress + needs-review banners. Sub-phase B (LLM/PDF/image/attachments/API key UI) still pending.
+Phase 4: Recipe Ingestion is functionally complete except for image/vision support (deferred until sage-rb grows a multi-modal content API). Both sub-phases shipped end-to-end: the URL gold path (JSON-LD/microdata/Open Graph) and the LLM-enhanced path (sage-rb for HTML fallback + PDF extraction, encrypted user API keys, test-connection UX, ActiveStorage with local/R2 backends). Next up: pick the next phase from the roadmap (likely Phase 5: Meal Planning).
 
 ## Active Tasks
-- [IN PROGRESS] Phase 4: Recipe Ingestion
-  - ✓ Sub-phase A: URL gold path (JSON-LD + microdata + Open Graph fallback)
-    - ✓ import_status enum migration + relaxed validations for imports
-    - ✓ RecipeIngestion::UrlParser with SSRF guards, redirect cap, retry-on-timeout, browser UA
-    - ✓ RecipeIngestion::JsonLdExtractor (top-level, @graph, arrays, multi-script, @type arrays)
-    - ✓ RecipeIngestion::MicrodataExtractor (Schema.org HTML5 microdata, nested HowToStep handling)
-    - ✓ RecipeIngestion::OpenGraphExtractor (last-resort title/description/image)
-    - ✓ RecipeIngestion::Normalizer (Schema.org → Recipe attrs, ISO 8601 durations incl. P0DT0H20M0S, freeform recipeYield, category mapping, HowToSection flattening, totalTime)
-    - ✓ RecipeIngestion::UrlIngester orchestrator with three-extractor cascade
-    - ✓ RecipeIngestionJob (GoodJob async, fail-with-message, fallback title for failed/needs_review)
-    - ✓ Api::V1::ImportsController (POST /imports + GET /imports/:apikey for polling)
-    - ✓ RecipesController#index excludes importing drafts via IS DISTINCT FROM
-    - ✓ Frontend ImportModal (bottom-sheet on mobile, focus management, Esc-to-close)
-    - ✓ Frontend ImportProgress (polls 1.5s, invalidates parent on completion, error card for failed)
-    - ✓ Frontend RecipeDetail short-circuits to ImportProgress for importing/failed states
-    - ✓ Frontend RecipeDetail needs_review banner (amber, calls user to edit)
-    - ✓ Frontend RecipeCard defensive null-title handling
-    - ✓ Frontend Recipes page Import button (admin/owner only)
-    - ✓ 54 new backend tests (JsonLdExtractor, Normalizer, MicrodataExtractor, OpenGraphExtractor, RecipeIngestionJob, ImportsController) — 91/91 total passing
-  - ⏭ Sub-phase B: LLM extraction + attachments + PDF/image + API key UI
-    - ⏭ Encrypted user LLM API key storage (Rails 8 encrypts)
-    - ⏭ ActiveStorage + Cloudflare R2 for source attachments
-    - ⏭ PDF ingestion path (pdf-reader + sage-rb extraction)
-    - ⏭ Image ingestion path (sage-rb vision)
-    - ⏭ sage-rb wrapper using fresh Configuration per-user (no global state)
-    - ⏭ Frontend Settings ApiKeyForm (provider + key + model)
-    - ⏭ Frontend ImportModal PDF/image tabs
+- [NEXT] Phase 5: Meal Planning — weekly plan grid, slot entries (recipe/quick/event/note), drag/drop, leftover automation
+- [NEXT] Follow-up: Image ingestion via vision (deferred from Phase 4)
+  - ⏭ Upstream multi-modal content support to sage-rb (Option C from the sub-phase B decision)
+  - ⏭ ImageIngester that renders PDF pages → images for scanned cookbooks, and handles direct image uploads
+  - ⏭ Re-process action on needs_review recipes so image PDFs uploaded today auto-process when vision lands
+- [NEXT] Follow-up: recipe detail source attachment download UI
+  - ⏭ Show attached source PDF on detail page with download link
+  - ⏭ Signed URL via ActiveStorage routes
 
 ## Open Questions/Blockers
 None
@@ -149,6 +130,32 @@ None
   - Frontend Recipes page — Import button next to Add (admin/owner only)
   - 54 new backend tests across JsonLdExtractor (7), Normalizer (16), MicrodataExtractor (9), OpenGraphExtractor (6), RecipeIngestionJob (6), ImportsController (10) — 91/91 passing
   - End-to-end tested against real URLs: NYT/Serious Eats/Bon Appétit (JSON-LD → complete), Smitten Kitchen (microdata → needs_review with 12 ingredients + title + servings + total time), Tastefully Simple (Open Graph → needs_review with title/description/image)
+- [2026-04-08] Phase 4 sub-phase B: LLM + PDF + attachments + key management
+  - Active Record encryption keys wired through Figaro (AR_ENCRYPTION_PRIMARY_KEY, _DETERMINISTIC_KEY, _KEY_DERIVATION_SALT) via a new initializer; Garnish avoids the standard credentials.yml.enc flow since it already uses Figaro for everything else
+  - Migration: llm_provider, llm_model, llm_api_key (text, encrypted) on users
+  - User model: encrypts :llm_api_key, LLM_PROVIDERS enum, has_llm_credentials?, validates all-three-set-or-all-three-blank
+  - ActiveStorage enabled (engine un-commented in application.rb), install migration run
+  - config/storage.yml: local disk for dev/test, cloudflare_r2 S3-compatible service for prod with endpoint derived from CLOUDFLARE_R2_ACCOUNT_ID; production falls back to local if R2 creds aren't set
+  - Recipe has_one_attached :source_file for PDFs/images
+  - RecipeIngestion::LlmExtractor — sage-rb wrapper that builds a fresh Sage::Configuration per call (no global state, no races between users); strips markdown fences, truncates content to 100KB, structured JSON output, tight error handling via custom ExtractionError
+  - RecipeIngestion::PdfParser — pdf-reader wrapper with 200KB text cap, safe MalformedPDFError rescue
+  - RecipeIngestion::PdfIngester — reads attached source_file, extracts text, hands to LlmExtractor; degrades gracefully when text is empty, user has no credentials, or LLM call fails
+  - RecipeIngestion::UrlIngester upgraded — four-tier cascade is now JSON-LD → microdata → LLM (if user has key and structured extraction was partial) → Open Graph; merge_best combines partial structured results with LLM completions so the cheapest path wins first
+  - RecipeIngestionJob — dispatches via `ingest` generic flow, carries result[:error] through to import_error on needs_review too (not just failed), so users see why a partial import landed where it did
+  - ImportsController accepts multipart file uploads via params[:file]; detects source_type via content_type (application/pdf → pdf, image/* → image)
+  - ImportsController fast-fail routing for image-based PDFs: peeks at page 1 synchronously via PDF::Reader, skips the job entirely and lands directly in needs_review with a "vision coming soon — file saved, will auto-process later" message; preserves the file so vision support can re-process it when it lands
+  - Api::V1::UserSettingsController: GET/PATCH /api/v1/user/settings (has_llm_key boolean only, never echoes the saved key); POST /api/v1/user/settings/test_llm (fires a tiny "reply ok" prompt against saved or ad-hoc credentials, reports auth_failed/connection_failed/provider_error codes for actionable UI feedback)
+  - Frontend api/userSettings.ts typed client + LlmTestResult discriminated union
+  - Frontend api/client.ts detects FormData and skips the default JSON Content-Type so multipart uploads work
+  - Frontend api/imports.ts: createFileImport via FormData
+  - Frontend ImportModal — URL/PDF tabs with per-tab mutations; PDF tab has a plain-language "selectable text required" warning explaining the limitation in terms users understand
+  - Frontend ApiKeyForm — provider dropdown (Anthropic/OpenAI/Ollama) with per-provider model recommendations in helper text, password-style API key input (never hydrates saved value), test-connection button (shows the model's actual reply or a targeted error), save button disables until the form is dirty, Remove button with confirmation
+  - Bug fix (caught during smoke testing): form was sending llm_api_key: null when user didn't type a new key, which cleared their saved credentials on a second save; now omits the field entirely unless the user typed something, and the save button disables until dirty
+  - Bug fix: import_error now flows to needs_review recipes too (previously only failed), so the banner can explain *why* an import is partial (missing text layer, no LLM credentials, partial structured data, etc.)
+  - Frontend RecipeDetail needs_review banner reads import_error and displays it verbatim when present; falls back to generic "couldn't extract all details" otherwise
+  - 19 new backend tests across LlmExtractor (8, with sage-rb stubbed) and UserSettingsController (11, covering show/update/test_llm in success and error paths) — 110/110 total passing
+  - Image ingestion intentionally deferred: sage-rb's provider adapters only accept string prompts, not vision content blocks. Fix is to add multi-modal content support to sage-rb upstream (Option C from the decision discussion) before enabling the image path here.
+  - Verified end-to-end against real URLs: Smitten Kitchen microdata partial now completes via LLM, Tastefully Simple no-structured-data completes via LLM, NYT/Serious Eats still complete via free JSON-LD path (no unnecessary LLM spend)
 
 ## Next Session
-Phase 4 sub-phase B: encrypted LLM API key storage + sage-rb wrapper using per-request Sage::Configuration (no global state to avoid races between users), ActiveStorage with Cloudflare R2 for source attachments, PDF/image ingestion paths, Settings ApiKeyForm UI. Then we can revisit the same Tastefully Simple URL and have it parse cleanly via LLM extraction.
+Phase 5: Meal Planning. See docs/plan/phases/phase-5.md for the full scope — weekly grid, meal slots supporting multiple entries per slot, leftover automation based on household preferences, drag-and-drop (Framer Motion), real-time sync across household members via ActionCable. Revisit deferred Phase 4 follow-ups (image/vision, source attachment UI) as polish items once the next critical-path phase is in.
