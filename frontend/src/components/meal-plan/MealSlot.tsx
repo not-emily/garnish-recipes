@@ -1,5 +1,8 @@
 import { Plus } from "lucide-react";
-import { MealEntry } from "./MealEntry";
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableMealEntry } from "./SortableMealEntry";
+import { MobileMealEntry } from "./MobileMealEntry";
 import type { MealPlanEntry, MealSlot as MealSlotType } from "@/types/mealPlan";
 
 interface MealSlotProps {
@@ -9,6 +12,22 @@ interface MealSlotProps {
   entries: MealPlanEntry[];
   onAddClick: (date: string, slot: MealSlotType) => void;
   onEntryOptionsClick: (entry: MealPlanEntry) => void;
+  // When set, the slot shows a "move here" affordance and tapping it calls
+  // onMoveHere with the active move target. Used by the mobile tap-to-move
+  // flow, which is mutually exclusive with drag-and-drop.
+  moveMode?: boolean;
+  onMoveHere?: (date: string, slot: MealSlotType) => void;
+  // When true, entries are rendered as Sortables and the slot is a
+  // droppable. Off on mobile where we use tap-to-move instead.
+  sortable?: boolean;
+  onEntryLongPress?: (entry: MealPlanEntry) => void;
+  moveTargetId?: number;
+}
+
+// Prefix used for slot droppable ids so they can be distinguished from
+// entry ids (which are plain numbers) in the DnD handler.
+export function slotDroppableId(date: string, slot: MealSlotType): string {
+  return `slot:${date}:${slot}`;
 }
 
 /**
@@ -23,9 +42,82 @@ export function MealSlot({
   entries,
   onAddClick,
   onEntryOptionsClick,
+  moveMode = false,
+  onMoveHere,
+  sortable = false,
+  onEntryLongPress,
+  moveTargetId,
 }: MealSlotProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: slotDroppableId(date, slot),
+    data: { type: "slot", date, slot },
+    disabled: !sortable,
+  });
+
+  const sortableIds = entries.map((e) => e.id);
+
+  const body = (
+    <div className="space-y-1">
+      {entries.length === 0 ? (
+        <button
+          type="button"
+          onClick={() =>
+            moveMode && onMoveHere
+              ? onMoveHere(date, slot)
+              : onAddClick(date, slot)
+          }
+          className={`w-full rounded-lg border border-dashed px-2 py-3 text-[10px] transition-colors ${
+            moveMode
+              ? "border-garnish-400 bg-garnish-50 text-garnish-700 hover:bg-garnish-100"
+              : "border-gray-200 text-gray-400 hover:border-garnish-300 hover:bg-garnish-50 hover:text-garnish-600"
+          }`}
+        >
+          {moveMode ? "Move here" : "Add"}
+        </button>
+      ) : sortable ? (
+        entries.map((entry) => (
+          <SortableMealEntry
+            key={entry.id}
+            entry={entry}
+            onOptionsClick={onEntryOptionsClick}
+          />
+        ))
+      ) : (
+        entries.map((entry) => (
+          <MobileMealEntry
+            key={entry.id}
+            entry={entry}
+            onOptionsClick={onEntryOptionsClick}
+            onLongPress={onEntryLongPress}
+            isMoveTarget={moveTargetId === entry.id}
+            onTap={
+              moveTargetId === entry.id ? () => onMoveHere?.(date, slot) : undefined
+              // Tapping the active move target while it sits in its own
+              // slot effectively cancels the move (no-op move) — handled
+              // upstream by exiting move mode after the call.
+            }
+          />
+        ))
+      )}
+      {moveMode && entries.length > 0 && onMoveHere && (
+        <button
+          type="button"
+          onClick={() => onMoveHere(date, slot)}
+          className="w-full rounded-lg border border-dashed border-garnish-400 bg-garnish-50 px-2 py-1.5 text-[10px] font-medium text-garnish-700 hover:bg-garnish-100"
+        >
+          Move here
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-1.5">
+    <div
+      ref={setNodeRef}
+      className={`space-y-1.5 rounded-lg p-1 transition-colors ${
+        isOver ? "bg-garnish-100/60 ring-1 ring-garnish-300" : ""
+      }`}
+    >
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
           {label}
@@ -39,25 +131,13 @@ export function MealSlot({
           <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="space-y-1">
-        {entries.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => onAddClick(date, slot)}
-            className="w-full rounded-lg border border-dashed border-gray-200 px-2 py-3 text-[10px] text-gray-400 transition-colors hover:border-garnish-300 hover:bg-garnish-50 hover:text-garnish-600"
-          >
-            Add
-          </button>
-        ) : (
-          entries.map((entry) => (
-            <MealEntry
-              key={entry.id}
-              entry={entry}
-              onOptionsClick={onEntryOptionsClick}
-            />
-          ))
-        )}
-      </div>
+      {sortable ? (
+        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+          {body}
+        </SortableContext>
+      ) : (
+        body
+      )}
     </div>
   );
 }

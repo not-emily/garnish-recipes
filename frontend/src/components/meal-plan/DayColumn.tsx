@@ -12,6 +12,11 @@ interface DayColumnProps {
   entries: MealPlanEntry[];
   onAddClick: (date: string, slot: MealSlotType) => void;
   onEntryOptionsClick: (entry: MealPlanEntry) => void;
+  sortable?: boolean;
+  moveMode?: boolean;
+  onMoveHere?: (date: string, slot: MealSlotType) => void;
+  onEntryLongPress?: (entry: MealPlanEntry) => void;
+  moveTargetId?: number;
 }
 
 /**
@@ -24,6 +29,11 @@ export function DayColumn({
   entries,
   onAddClick,
   onEntryOptionsClick,
+  sortable = false,
+  moveMode = false,
+  onMoveHere,
+  onEntryLongPress,
+  moveTargetId,
 }: DayColumnProps) {
   const isToday = date === todayIso();
 
@@ -73,6 +83,11 @@ export function DayColumn({
             entries={entriesBySlot[slot.value]}
             onAddClick={onAddClick}
             onEntryOptionsClick={onEntryOptionsClick}
+            sortable={sortable}
+            moveMode={moveMode}
+            onMoveHere={onMoveHere}
+            onEntryLongPress={onEntryLongPress}
+            moveTargetId={moveTargetId}
           />
         ))}
       </div>

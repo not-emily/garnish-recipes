@@ -4,11 +4,13 @@ import {
   createMealPlanEntry,
   updateMealPlanEntry,
   deleteMealPlanEntry,
+  reorderMealPlanEntries,
 } from "@/api/mealPlans";
 import type {
   CreateEntryInput,
   UpdateEntryInput,
   MealPlan,
+  MealPlanEntry,
 } from "@/types/mealPlan";
 
 /**
@@ -77,6 +79,57 @@ export function useMealPlan(weekStart: string) {
     },
   });
 
+  // Reorder entries within a single slot. The caller supplies the full new
+  // ordering of entry ids for that slot, and we patch the cache optimistically
+  // so the drag-and-drop feels instant. On success the server response is the
+  // source of truth and replaces the optimistic state.
+  const reorderEntries = useMutation({
+    mutationFn: (entryIds: number[]) =>
+      reorderMealPlanEntries(weekStart, entryIds),
+    onMutate: async (entryIds) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<{ data: MealPlan }>(queryKey);
+      queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
+        if (!old) return old;
+        const positionById = new Map(entryIds.map((id, idx) => [id, idx]));
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            entries: old.data.entries
+              .map((e) =>
+                positionById.has(e.id)
+                  ? { ...e, position: positionById.get(e.id)! }
+                  : e
+              )
+              .sort(entryOrder),
+          },
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSuccess: (res) => {
+      queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
+        if (!old) return old;
+        const updated = new Map(res.data.map((e: MealPlanEntry) => [e.id, e]));
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            entries: old.data.entries
+              .map((e) => updated.get(e.id) ?? e)
+              .sort(entryOrder),
+          },
+        };
+      });
+    },
+  });
+
   return {
     mealPlan: query.data?.data,
     isLoading: query.isLoading,
@@ -84,6 +137,7 @@ export function useMealPlan(weekStart: string) {
     createEntry,
     updateEntry,
     deleteEntry,
+    reorderEntries,
   };
 }
 

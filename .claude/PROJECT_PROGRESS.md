@@ -4,12 +4,12 @@
 Roadmap: [plan.md](../docs/plan/plan.md)
 Current Phase: [phase-5.md](../docs/plan/phases/phase-5.md)
 Latest Weekly Report: None
-Latest Daily Report: [daily-2026-04-06.md](../docs/reports/daily-2026-04-06.md)
+Latest Daily Report: [daily-2026-04-09.md](../docs/reports/daily-2026-04-09.md)
 
-Last Updated: 2026-04-08
+Last Updated: 2026-04-09
 
 ## Current Focus
-Phase 5: Meal Planning — sub-phases A (core CRUD grid) and B (entry types + per-entry settings) are shipped and working end-to-end on desktop/tablet, with Recipe/Event/Note tabs in the entry picker, quick-meal creation inline, and the needs-hover-style meatball menu. Sub-phases C (mobile swipe view + drag-and-drop reordering) and D (ActionCable real-time sync) are still pending.
+Phase 5: Meal Planning — sub-phases A and B are shipped and verified. Sub-phase C (mobile swipe view + drag-and-drop) is **code-complete but UNTESTED end-to-end** — needs smoke testing before sub-phase D. Sub-phase D (ActionCable real-time sync) still pending.
 
 ## Active Tasks
 - [IN PROGRESS] Phase 5: Meal Planning
@@ -38,11 +38,22 @@ Phase 5: Meal Planning — sub-phases A (core CRUD grid) and B (entry types + pe
     - ✓ Rules-of-Hooks fix in EntryPicker (useQuery was after a conditional early-return → white screen on create)
     - ✓ placeholderData: keepPreviousData on search queries to prevent flicker on every keystroke
     - ✓ 3 new tests for grocery coercion (events forced false, notes forced false, recipes kept true) — 130/130 passing
-  - ⏭ Sub-phase C: Mobile experience + drag-and-drop
-    - ⏭ Mobile single-day swipe view (Framer Motion gesture) — replaces the current 1-column fallback
-    - ⏭ @dnd-kit/core install + drag-and-drop reordering within slots
-    - ⏭ Drag-and-drop moving entries between slots / days
-    - ⏭ Tap-to-move on mobile (long-press → highlight → tap destination)
+  - ⏳ Sub-phase C: Mobile experience + drag-and-drop — **code-complete, needs smoke testing**
+    - ✓ @dnd-kit/core + @dnd-kit/sortable installed
+    - ✓ WeekView wrapped in DndContext — PointerSensor (5px distance) + TouchSensor (250ms delay)
+    - ✓ SortableMealEntry wrapper with post-drag click suppression (prevents Link navigation after drag)
+    - ✓ MealSlot as useDroppable + SortableContext; highlight ring on drag-over
+    - ✓ Same-slot reorder → reorderEntries mutation (optimistic cache with rollback)
+    - ✓ Cross-slot drag → updateEntry(date, meal_slot) — backend appends at end
+    - ✓ DragOverlay shows ghost of active entry
+    - ✓ MobileDayView — single-day swipe (Framer Motion drag="x" with velocity detection), replaces 1-col fallback below sm breakpoint via useMediaQuery
+    - ✓ Day strip header (7 buttons, tap to jump, today accent, active inverted)
+    - ✓ Resets to today's column on mount + on week change
+    - ✓ useLongPress hook (500ms hold, 8px move threshold, click suppression)
+    - ✓ Tap-to-move flow: long-press entry → highlight ring + "Moving X — tap a slot" banner → swipe to target day → tap "Move here" → updateEntry; tapping source slot or banner X cancels
+    - ✓ MobileMealEntry wrapper threads long-press + move-target highlight into non-sortable mobile layout
+    - ✓ 130/130 backend tests pass, vite build clean, zero new TS errors
+    - ⏳ **Needs end-to-end smoke testing**: desktop drag reorder, desktop cross-slot drag, mobile swipe nav, mobile long-press → move flow, recipe detail link still works after cancelled drag
   - ⏭ Sub-phase D: Real-time sync via ActionCable
     - ⏭ Enable action_cable/engine in application.rb
     - ⏭ MealPlanChannel with per-household subscription, broadcasts on CRUD
@@ -193,4 +204,5 @@ None
   - Verified end-to-end against real URLs: Smitten Kitchen microdata partial now completes via LLM, Tastefully Simple no-structured-data completes via LLM, NYT/Serious Eats still complete via free JSON-LD path (no unnecessary LLM spend)
 
 ## Next Session
-Phase 5 sub-phase C (mobile swipe view + @dnd-kit drag-and-drop) and sub-phase D (ActionCable real-time sync). After that, Phase 6 (leftover automation — the columns and household settings are already in place from Phase 5's migration, just need the UI and logic).
+1. **Smoke test Phase 5 sub-phase C** — run `foreman start -f Procfile.dev`, test desktop drag (reorder + cross-slot), mobile swipe nav, mobile long-press → tap-to-move, verify recipe detail link works after cancelled drag. Fix any issues found.
+2. Phase 5 sub-phase D (ActionCable real-time sync). After that, Phase 6 (leftover automation — the columns and household settings are already in place from Phase 5's migration, just need the UI and logic).

@@ -2,8 +2,10 @@ import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useMealPlan } from "@/hooks/useMealPlan";
 import { WeekView } from "@/components/meal-plan/WeekView";
+import { MobileDayView } from "@/components/meal-plan/MobileDayView";
 import { EntryPicker } from "@/components/meal-plan/EntryPicker";
 import { EntryOptions } from "@/components/meal-plan/EntryOptions";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { MealPlanEntry, MealSlot } from "@/types/mealPlan";
 import {
   addWeeks,
@@ -18,8 +20,15 @@ export function MealPlan() {
   // worth the indirection yet.
   const [weekStart, setWeekStart] = useState(() => weekStartOf(todayIso()));
 
-  const { mealPlan, isLoading, isError, createEntry, updateEntry, deleteEntry } =
-    useMealPlan(weekStart);
+  const {
+    mealPlan,
+    isLoading,
+    isError,
+    createEntry,
+    updateEntry,
+    deleteEntry,
+    reorderEntries,
+  } = useMealPlan(weekStart);
 
   // The slot the user is currently adding to. Null when the picker is closed.
   const [pickerTarget, setPickerTarget] = useState<{
@@ -31,6 +40,11 @@ export function MealPlan() {
   const [optionsEntry, setOptionsEntry] = useState<MealPlanEntry | null>(null);
 
   const isThisWeek = useMemo(() => weekStart === weekStartOf(todayIso()), [weekStart]);
+
+  // Below the `sm` breakpoint we render the swipeable single-day view
+  // instead of the multi-column week grid. The grid's existing 1-col
+  // fallback at this width was a placeholder until this view shipped.
+  const isMobile = useMediaQuery("(max-width: 639px)");
 
   function handleAddClick(date: string, slot: MealSlot) {
     setPickerTarget({ date, slot });
@@ -128,12 +142,28 @@ export function MealPlan() {
           Couldn't load the meal plan. Try again.
         </div>
       ) : mealPlan ? (
-        <WeekView
-          weekStart={weekStart}
-          entries={mealPlan.entries}
-          onAddClick={handleAddClick}
-          onEntryOptionsClick={(entry) => setOptionsEntry(entry)}
-        />
+        isMobile ? (
+          <MobileDayView
+            weekStart={weekStart}
+            entries={mealPlan.entries}
+            onAddClick={handleAddClick}
+            onEntryOptionsClick={(entry) => setOptionsEntry(entry)}
+            onMoveEntry={(id, date, slot) =>
+              updateEntry.mutate({ id, input: { date, meal_slot: slot } })
+            }
+          />
+        ) : (
+          <WeekView
+            weekStart={weekStart}
+            entries={mealPlan.entries}
+            onAddClick={handleAddClick}
+            onEntryOptionsClick={(entry) => setOptionsEntry(entry)}
+            onReorderSlot={(ids) => reorderEntries.mutate(ids)}
+            onMoveEntry={(id, date, slot) =>
+              updateEntry.mutate({ id, input: { date, meal_slot: slot } })
+            }
+          />
+        )
       ) : null}
 
       <EntryPicker
