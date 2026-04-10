@@ -22,6 +22,9 @@ interface MealSlotProps {
   sortable?: boolean;
   onEntryLongPress?: (entry: MealPlanEntry) => void;
   moveTargetId?: number;
+  // "date:slot" string from the parent DndContext's onDragOver, used to
+  // highlight this slot when any child entry is being hovered during a drag.
+  overSlotId?: string | null;
 }
 
 // Prefix used for slot droppable ids so they can be distinguished from
@@ -47,12 +50,18 @@ export function MealSlot({
   sortable = false,
   onEntryLongPress,
   moveTargetId,
+  overSlotId,
 }: MealSlotProps) {
+  const droppableId = slotDroppableId(date, slot);
   const { setNodeRef, isOver } = useDroppable({
-    id: slotDroppableId(date, slot),
+    id: droppableId,
     data: { type: "slot", date, slot },
     disabled: !sortable,
   });
+
+  // Highlight the slot when anything inside it is being dragged over —
+  // either the slot itself or any entry within it.
+  const isSlotActive = isOver || overSlotId === `${date}:${slot}`;
 
   const sortableIds = entries.map((e) => e.id);
 
@@ -115,7 +124,7 @@ export function MealSlot({
     <div
       ref={setNodeRef}
       className={`space-y-1.5 rounded-lg p-1 transition-colors ${
-        isOver ? "bg-garnish-100/60 ring-1 ring-garnish-300" : ""
+        isSlotActive ? "bg-garnish-100/60 ring-1 ring-garnish-300" : ""
       }`}
     >
       <div className="flex items-center justify-between">

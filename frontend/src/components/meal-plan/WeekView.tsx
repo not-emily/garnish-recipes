@@ -8,6 +8,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -52,6 +53,9 @@ export function WeekView({
 }: WeekViewProps) {
   const days = weekDays(weekStart);
   const [activeEntry, setActiveEntry] = useState<MealPlanEntry | null>(null);
+  // Tracks which slot the drag is currently over so the full slot area
+  // highlights (not just the narrow droppable gap between entries).
+  const [overSlotId, setOverSlotId] = useState<string | null>(null);
 
   // PointerSensor (desktop) with a small distance so clicks pass through.
   // TouchSensor with a delay to make dragging feasible on tablets without
@@ -68,8 +72,25 @@ export function WeekView({
     setActiveEntry(entry ?? null);
   }
 
+  function handleDragOver(event: DragOverEvent) {
+    const { over } = event;
+    if (!over) {
+      setOverSlotId(null);
+      return;
+    }
+    const overData = over.data.current as
+      | { type?: string; date?: string; slot?: string }
+      | undefined;
+    if (overData?.date && overData?.slot) {
+      setOverSlotId(`${overData.date}:${overData.slot}`);
+    } else {
+      setOverSlotId(null);
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setActiveEntry(null);
+    setOverSlotId(null);
     const { active, over } = event;
     if (!over) return;
     if (active.id === over.id) return;
@@ -117,6 +138,7 @@ export function WeekView({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
@@ -128,10 +150,11 @@ export function WeekView({
             onAddClick={onAddClick}
             onEntryOptionsClick={onEntryOptionsClick}
             sortable
+            overSlotId={overSlotId}
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeEntry ? (
           <div className="opacity-90">
             <MealEntry entry={activeEntry} />

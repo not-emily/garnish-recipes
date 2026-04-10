@@ -15,10 +15,13 @@ interface SortableMealEntryProps {
  * handle, with activation gated on a small pointer distance so ordinary
  * clicks still reach the inner <Link> to the recipe detail page.
  *
+ * Layout animations are disabled (transition: null) because the DragOverlay
+ * provides visual feedback during drag, and the optimistic cache update
+ * instantly reorders the DOM on drop — no settling animation needed.
+ *
  * Click suppression: after a drag finishes, the browser still synthesises
  * a click on pointer-up. We capture it and preventDefault + stopPropagation
- * so the entry's <Link> doesn't navigate away. Detection uses an
- * `isDragging` latch that stays true briefly after drop.
+ * so the entry's <Link> doesn't navigate away.
  */
 export function SortableMealEntry({
   entry,
@@ -30,12 +33,17 @@ export function SortableMealEntry({
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
   } = useSortable({
     id: entry.id,
     disabled,
     data: { type: "entry", date: entry.date, slot: entry.meal_slot },
+    // Disable layout shift transition — the DragOverlay handles visual
+    // feedback during drag, and our synchronous optimistic update handles
+    // the instant reorder on drop. Without this, dnd-kit applies a CSS
+    // transition that races with the React re-render, causing a visible
+    // snap-back-then-settle animation.
+    transition: null,
   });
 
   // Latch: true while dragging and for one tick after drop, so the
@@ -55,8 +63,11 @@ export function SortableMealEntry({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
+    transition: "none" as const,
+    // Fully hidden during drag — the DragOverlay shows the ghost card.
+    // This eliminates the flash that occurs when dnd-kit clears the
+    // transform on drop before the optimistic update reorders the DOM.
+    opacity: isDragging ? 0 : 1,
   };
 
   return (

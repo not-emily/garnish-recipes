@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   getMealPlan,
   createMealPlanEntry,
@@ -25,6 +25,10 @@ export function useMealPlan(weekStart: string) {
   const query = useQuery({
     queryKey,
     queryFn: () => getMealPlan(weekStart),
+    // Keep the previous week's data on-screen while the new week loads,
+    // so MobileDayView stays mounted during cross-week swipe navigation
+    // (avoids unmount → remount → state loss).
+    placeholderData: keepPreviousData,
   });
 
   const createEntry = useMutation({
@@ -47,6 +51,30 @@ export function useMealPlan(weekStart: string) {
   const updateEntry = useMutation({
     mutationFn: ({ id, input }: { id: number; input: UpdateEntryInput }) =>
       updateMealPlanEntry(weekStart, id, input),
+    onMutate: ({ id, input }) => {
+      queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<{ data: MealPlan }>(queryKey);
+      // Optimistic update — immediately move the entry to its new slot so
+      // drag-and-drop feels instant (no snap-back while waiting for server).
+      queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            entries: old.data.entries
+              .map((e) => (e.id === id ? { ...e, ...input } : e))
+              .sort(entryOrder),
+          },
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
     onSuccess: (res) => {
       queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
         if (!old) return old;
@@ -86,8 +114,8 @@ export function useMealPlan(weekStart: string) {
   const reorderEntries = useMutation({
     mutationFn: (entryIds: number[]) =>
       reorderMealPlanEntries(weekStart, entryIds),
-    onMutate: async (entryIds) => {
-      await queryClient.cancelQueries({ queryKey });
+    onMutate: (entryIds) => {
+      queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<{ data: MealPlan }>(queryKey);
       queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
         if (!old) return old;

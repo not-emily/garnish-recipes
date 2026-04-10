@@ -1,3 +1,5 @@
+require "cgi"
+
 module RecipeIngestion
   # Maps a Schema.org Recipe hash to attributes that match Garnish's Recipe
   # model. Returns a hash suitable for `recipe.assign_attributes(...)`.
@@ -35,7 +37,7 @@ module RecipeIngestion
     private
 
     def string(val)
-      s = first(val).to_s.strip
+      s = CGI.unescapeHTML(first(val).to_s).strip
       s.presence
     end
 

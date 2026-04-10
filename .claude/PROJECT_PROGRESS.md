@@ -6,54 +6,32 @@ Current Phase: [phase-5.md](../docs/plan/phases/phase-5.md)
 Latest Weekly Report: None
 Latest Daily Report: [daily-2026-04-09.md](../docs/reports/daily-2026-04-09.md)
 
-Last Updated: 2026-04-09
+Last Updated: 2026-04-10
 
 ## Current Focus
-Phase 5: Meal Planning — sub-phases A and B are shipped and verified. Sub-phase C (mobile swipe view + drag-and-drop) is **code-complete but UNTESTED end-to-end** — needs smoke testing before sub-phase D. Sub-phase D (ActionCable real-time sync) still pending.
+Phase 5: Meal Planning — sub-phases A+B shipped. Sub-phase C smoke-tested: most issues fixed, one known bug remains (mobile cross-week swipe navigation). Sub-phase D (ActionCable real-time sync) is next.
 
 ## Active Tasks
 - [IN PROGRESS] Phase 5: Meal Planning
   - ✓ Sub-phase A: Core CRUD grid (desktop/tablet)
-    - ✓ MealPlan + MealPlanEntry models, migration, lazy per-week creation, Monday canonicalization
-    - ✓ MealPlansController + MealPlanPolicy (all household members can CRUD — collaborative workspace, not admin-gated)
-    - ✓ Routes: show/create/update/destroy/reorder
-    - ✓ 17 new backend tests (auto-create, canonicalization, CRUD, scoping, position, reorder, cross-household protection)
-    - ✓ Frontend types, api client, useMealPlan hook with TanStack Query cache patching
-    - ✓ Weekly grid UI: WeekView, DayColumn, MealSlot, MealEntry with today-accent and responsive grid
-    - ✓ Week navigation (prev/today/next) with formatted week range header
-    - ✓ Pure date helpers (lib/weekUtils) — dependency-free, local-timezone parsing
   - ✓ Sub-phase B: Entry variety + per-entry settings + UX polish
-    - ✓ EntryPicker with Recipe/Event/Note tabs (3 tabs, not 4 — quick meals live inside Recipe tab with pill filter)
-    - ✓ Recipe tab: search + pill filter (All/Recipes/Quick meals), events filtered out of default browse
-    - ✓ Quick meal inline creation with category/servings/primary protein (quick meals live in the library for reuse)
-    - ✓ Event tab: browse past 5 events (capped via backend limit param), "Create <search>" with title pre-fill
-    - ✓ Note tab: freeform title, recipe_id null
-    - ✓ EntryOptions modal with simplified variant for events/notes (no servings/grocery for non-cooked entries)
-    - ✓ Backend coerces include_in_grocery: false for events/notes via before_validation (Phase 7 grocery gen can just filter by the flag)
-    - ✓ Derived grocery_relevant? helper on MealPlanEntry, exposed in serializer
-    - ✓ Main RecipeBrowser hides events entirely — events are meal-plan-only
-    - ✓ Recipes index `limit` param with 200-row ceiling
-    - ✓ Context-aware back button — Meal Plan ← from recipe detail when arrived via meal plan link, Recipes ← otherwise, via React Router location.state
-    - ✓ Meatball menu visibility: hidden-at-rest-on-desktop / always-on-touch using runtime matchMedia (hook useMediaQuery) — Tailwind v4 arbitrary variant parser didn't reliably accept the combined `(min-width: 1024px) and (hover: hover)` media query, so JS is more reliable
-    - ✓ Rules-of-Hooks fix in EntryPicker (useQuery was after a conditional early-return → white screen on create)
-    - ✓ placeholderData: keepPreviousData on search queries to prevent flicker on every keystroke
-    - ✓ 3 new tests for grocery coercion (events forced false, notes forced false, recipes kept true) — 130/130 passing
-  - ⏳ Sub-phase C: Mobile experience + drag-and-drop — **code-complete, needs smoke testing**
-    - ✓ @dnd-kit/core + @dnd-kit/sortable installed
-    - ✓ WeekView wrapped in DndContext — PointerSensor (5px distance) + TouchSensor (250ms delay)
-    - ✓ SortableMealEntry wrapper with post-drag click suppression (prevents Link navigation after drag)
-    - ✓ MealSlot as useDroppable + SortableContext; highlight ring on drag-over
-    - ✓ Same-slot reorder → reorderEntries mutation (optimistic cache with rollback)
-    - ✓ Cross-slot drag → updateEntry(date, meal_slot) — backend appends at end
-    - ✓ DragOverlay shows ghost of active entry
-    - ✓ MobileDayView — single-day swipe (Framer Motion drag="x" with velocity detection), replaces 1-col fallback below sm breakpoint via useMediaQuery
-    - ✓ Day strip header (7 buttons, tap to jump, today accent, active inverted)
-    - ✓ Resets to today's column on mount + on week change
-    - ✓ useLongPress hook (500ms hold, 8px move threshold, click suppression)
-    - ✓ Tap-to-move flow: long-press entry → highlight ring + "Moving X — tap a slot" banner → swipe to target day → tap "Move here" → updateEntry; tapping source slot or banner X cancels
-    - ✓ MobileMealEntry wrapper threads long-press + move-target highlight into non-sortable mobile layout
-    - ✓ 130/130 backend tests pass, vite build clean, zero new TS errors
-    - ⏳ **Needs end-to-end smoke testing**: desktop drag reorder, desktop cross-slot drag, mobile swipe nav, mobile long-press → move flow, recipe detail link still works after cancelled drag
+  - ⏳ Sub-phase C: Mobile experience + drag-and-drop — **smoke-tested, one known bug**
+    - ✓ Desktop drag-drop: same-slot reorder + cross-slot move working
+    - ✓ Snap-back animation fixed: transition:null on useSortable, dropAnimation:null on DragOverlay, synchronous optimistic updates (removed async/await from onMutate), hidden original during drag (opacity:0)
+    - ✓ Slot highlight covers entire slot area during drag (onDragOver tracks overSlotId, threaded through DayColumn → MealSlot)
+    - ✓ Recipe detail link works after cancelled drag (click suppression via justDraggedRef)
+    - ✓ Mobile swipe direction animation fixed (Framer Motion variants with custom prop instead of inline values)
+    - ✓ Replaced long-press/tap-to-move with real drag-and-drop on mobile (TouchSensor 250ms delay, same DndContext pattern as desktop)
+    - ✓ Edge-scrolling during drag: hold near viewport edge to advance day (window pointermove listener, self-rescheduling timer with 600ms initial / 800ms repeat)
+    - ✓ Edge-scroll stops at week boundaries during drag (entry can't cross weeks)
+    - ✓ Bottom sheets (EntryPicker, EntryOptions, ImportModal) z-index bumped to z-[60] so they render above the z-50 bottom nav
+    - ✓ HTML entity decoding in recipe imports (CGI.unescapeHTML in normalizer string() method — fixes &#39; etc. from JSON-LD)
+    - ✓ useMealPlan: placeholderData: keepPreviousData for smooth week transitions
+    - ✓ onDragCancel handler clears stuck drag state
+    - ✓ Render-time week change detection (replaces useEffect to avoid StrictMode double-fire)
+    - 🚫 **Known bug**: mobile cross-week swipe navigation (Sunday→Monday, Monday→Sunday) doesn't work — likely a deeper interaction between Framer Motion drag, DndContext, and React state batching across parent/child components. Within-week day navigation works fine.
+    - ✓ Tiny drag flash on same-slot reorder (cosmetic, livable)
+    - ✓ 130/130 backend tests pass, vite build clean
   - ⏭ Sub-phase D: Real-time sync via ActionCable
     - ⏭ Enable action_cable/engine in application.rb
     - ⏭ MealPlanChannel with per-household subscription, broadcasts on CRUD
@@ -68,7 +46,7 @@ Phase 5: Meal Planning — sub-phases A and B are shipped and verified. Sub-phas
   - ⏭ Signed URL via ActiveStorage routes
 
 ## Open Questions/Blockers
-None
+- **Mobile cross-week swipe**: Swiping past Sunday/Monday on mobile single-day view doesn't advance the week. Desktop week nav buttons work. Root cause suspected to be Framer Motion drag + DndContext interaction preventing the swipe gesture from completing at week boundaries. Needs investigation in a future session.
 
 ## Completed This Week
 - [2026-04-06] Project architecture planning
@@ -202,7 +180,19 @@ None
   - 19 new backend tests across LlmExtractor (8, with sage-rb stubbed) and UserSettingsController (11, covering show/update/test_llm in success and error paths) — 110/110 total passing
   - Image ingestion intentionally deferred: sage-rb's provider adapters only accept string prompts, not vision content blocks. Fix is to add multi-modal content support to sage-rb upstream (Option C from the decision discussion) before enabling the image path here.
   - Verified end-to-end against real URLs: Smitten Kitchen microdata partial now completes via LLM, Tastefully Simple no-structured-data completes via LLM, NYT/Serious Eats still complete via free JSON-LD path (no unnecessary LLM spend)
+- [2026-04-10] Phase 5 sub-phase C: Smoke testing + bug fixes
+  - Desktop drag-drop: snap-back animation eliminated (transition:null, dropAnimation:null, sync optimistic updates, opacity:0 during drag)
+  - Slot highlight: full slot area highlights during cross-slot drag (onDragOver + overSlotId prop chain)
+  - Mobile: replaced long-press/tap-to-move with real drag-and-drop (TouchSensor, same pattern as desktop)
+  - Mobile: swipe direction animation fixed (Framer Motion variants with custom prop)
+  - Mobile: edge-scrolling during drag (hold near viewport edge to advance day, self-rescheduling timer)
+  - Bottom sheets: z-index fix so modals render above bottom nav (z-50 → z-[60])
+  - HTML entities: CGI.unescapeHTML in normalizer for JSON-LD recipe imports (fixes &#39; etc.)
+  - useMealPlan: placeholderData: keepPreviousData for smooth week transitions
+  - Render-time week change detection (replaces useEffect to avoid StrictMode double-fire)
+  - Known bug logged: mobile cross-week swipe navigation doesn't advance week
 
 ## Next Session
-1. **Smoke test Phase 5 sub-phase C** — run `foreman start -f Procfile.dev`, test desktop drag (reorder + cross-slot), mobile swipe nav, mobile long-press → tap-to-move, verify recipe detail link works after cancelled drag. Fix any issues found.
-2. Phase 5 sub-phase D (ActionCable real-time sync). After that, Phase 6 (leftover automation — the columns and household settings are already in place from Phase 5's migration, just need the UI and logic).
+1. **Debug mobile cross-week swipe** — investigate why swiping past Sunday/Monday doesn't advance the week. Check if Framer Motion's onDragEnd fires at all at week boundaries. May need to decouple Framer Motion swipe from DndContext more cleanly.
+2. **Phase 5 sub-phase D** (ActionCable real-time sync) — MealPlanChannel, broadcasts on CRUD, frontend subscription.
+3. Phase 6 (leftover automation — the columns and household settings are already in place from Phase 5's migration, just need the UI and logic).

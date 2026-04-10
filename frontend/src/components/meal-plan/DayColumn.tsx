@@ -17,6 +17,9 @@ interface DayColumnProps {
   onMoveHere?: (date: string, slot: MealSlotType) => void;
   onEntryLongPress?: (entry: MealPlanEntry) => void;
   moveTargetId?: number;
+  // "date:slot" string identifying the slot currently being dragged over,
+  // used to highlight the full slot area during cross-slot drags.
+  overSlotId?: string | null;
 }
 
 /**
@@ -34,6 +37,7 @@ export function DayColumn({
   onMoveHere,
   onEntryLongPress,
   moveTargetId,
+  overSlotId,
 }: DayColumnProps) {
   const isToday = date === todayIso();
 
@@ -88,6 +92,7 @@ export function DayColumn({
             onMoveHere={onMoveHere}
             onEntryLongPress={onEntryLongPress}
             moveTargetId={moveTargetId}
+            overSlotId={overSlotId}
           />
         ))}
       </div>

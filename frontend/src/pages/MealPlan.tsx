@@ -151,6 +151,8 @@ export function MealPlan() {
             onMoveEntry={(id, date, slot) =>
               updateEntry.mutate({ id, input: { date, meal_slot: slot } })
             }
+            onReorderSlot={(ids) => reorderEntries.mutate(ids)}
+            onWeekChange={(delta) => setWeekStart(addWeeks(weekStart, delta))}
           />
         ) : (
           <WeekView
