@@ -28,6 +28,7 @@ module Api
         entry.position = next_position_for(plan, entry.date, entry.meal_slot)
 
         if entry.save
+          broadcast(plan, action: "entry_created", entry: serialize_entry(entry))
           render json: { data: serialize_entry(entry) }, status: :created
         else
           render_validation_errors(entry)
@@ -43,6 +44,7 @@ module Api
 
         entry = plan.entries.find(params[:id])
         if entry.update(entry_params_for_update)
+          broadcast(plan, action: "entry_updated", entry: serialize_entry(entry))
           render json: { data: serialize_entry(entry) }
         else
           render_validation_errors(entry)
@@ -57,7 +59,9 @@ module Api
         return unless authorize!(plan, :destroy_entry?)
 
         entry = plan.entries.find(params[:id])
+        entry_id = entry.id
         entry.destroy!
+        broadcast(plan, action: "entry_destroyed", entry_id: entry_id)
         head :no_content
       rescue ActiveRecord::RecordNotFound
         render_error("not_found", "Entry not found", :not_found)
@@ -81,7 +85,9 @@ module Api
           end
         end
 
-        render json: { data: plan.entries.reload.map { |e| serialize_entry(e) } }
+        reloaded = plan.entries.reload.map { |e| serialize_entry(e) }
+        broadcast(plan, action: "entries_reordered", entries: reloaded)
+        render json: { data: reloaded }
       end
 
       private
@@ -167,6 +173,14 @@ module Api
 
       def render_error(code, message, status)
         render json: { error: { code: code, message: message } }, status: status
+      end
+
+      # Broadcast a change to all subscribers of this meal plan's channel.
+      # actor_apikey lets the originating client ignore its own broadcasts
+      # (it already applied the change via optimistic update). Uses the
+      # public apikey to match the frontend's user.id convention.
+      def broadcast(plan, payload)
+        MealPlanChannel.broadcast_to(plan, payload.merge(actor_apikey: current_user.apikey))
       end
     end
   end

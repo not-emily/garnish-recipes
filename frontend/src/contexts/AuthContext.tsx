@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, setAccessToken, setSessionExpiredHandler } from "@/api/client";
+import { resetConsumer } from "@/lib/cable";
 import type { User, ApiResponse } from "@/types";
 
 interface AuthState {
@@ -103,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setAccessToken(null);
     setUser(null);
+    resetConsumer();
   }, []);
 
   // Handle session expiration triggered from the API client
@@ -110,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSessionExpired = useCallback(() => {
     setAccessToken(null);
     setUser(null);
+    resetConsumer();
   }, []);
 
   useEffect(() => {
