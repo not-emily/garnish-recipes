@@ -11,6 +11,8 @@ class User < ApplicationRecord
   has_many :household_memberships, dependent: :destroy
   has_many :households, through: :household_memberships
   has_many :recipe_collections, dependent: :destroy
+  has_many :collection_shares, foreign_key: :shared_with_id, dependent: :destroy
+  has_many :shared_collections, through: :collection_shares, source: :recipe_collection
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }

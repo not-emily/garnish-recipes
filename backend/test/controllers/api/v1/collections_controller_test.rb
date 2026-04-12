@@ -241,6 +241,153 @@ module Api
                  headers: auth_headers(@owner), as: :json
         end
       end
+
+      # --- Sharing ---
+
+      test "share collection with another user" do
+        assert_difference "CollectionShare.count", 1 do
+          post "/api/v1/collections/#{@collection.apikey}/shares",
+               headers: auth_headers(@owner),
+               params: { email: @other_owner.email },
+               as: :json
+        end
+        assert_response :created
+        body = JSON.parse(response.body)
+        assert_equal @other_owner.apikey, body["data"]["user"]["id"]
+      end
+
+      test "share returns 404 for unknown email" do
+        post "/api/v1/collections/#{@collection.apikey}/shares",
+             headers: auth_headers(@owner),
+             params: { email: "nobody@test.com" },
+             as: :json
+        assert_response :not_found
+      end
+
+      test "share returns 422 for self-share" do
+        post "/api/v1/collections/#{@collection.apikey}/shares",
+             headers: auth_headers(@owner),
+             params: { email: @owner.email },
+             as: :json
+        assert_response :unprocessable_entity
+      end
+
+      test "share returns 422 for duplicate share" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        post "/api/v1/collections/#{@collection.apikey}/shares",
+             headers: auth_headers(@owner),
+             params: { email: @other_owner.email },
+             as: :json
+        assert_response :unprocessable_entity
+      end
+
+      test "share forbidden for non-owner" do
+        @collection.update!(visibility: "household")
+        post "/api/v1/collections/#{@collection.apikey}/shares",
+             headers: auth_headers(@member),
+             params: { email: @other_owner.email },
+             as: :json
+        assert_response :forbidden
+      end
+
+      test "list shares" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        get "/api/v1/collections/#{@collection.apikey}/shares",
+            headers: auth_headers(@owner), as: :json
+        assert_response :ok
+        body = JSON.parse(response.body)
+        assert_equal 1, body["data"].size
+      end
+
+      test "list shares forbidden for non-owner" do
+        @collection.update!(visibility: "household")
+        get "/api/v1/collections/#{@collection.apikey}/shares",
+            headers: auth_headers(@member), as: :json
+        assert_response :forbidden
+      end
+
+      test "revoke share as owner" do
+        share = @collection.collection_shares.create!(shared_with: @other_owner)
+        assert_difference "CollectionShare.count", -1 do
+          delete "/api/v1/collections/#{@collection.apikey}/shares/#{share.id}",
+                 headers: auth_headers(@owner), as: :json
+        end
+        assert_response :no_content
+      end
+
+      test "remove self from shared collection" do
+        share = @collection.collection_shares.create!(shared_with: @other_owner)
+        assert_difference "CollectionShare.count", -1 do
+          delete "/api/v1/collections/#{@collection.apikey}/shares/#{share.id}",
+                 headers: auth_headers(@other_owner), as: :json
+        end
+        assert_response :no_content
+      end
+
+      test "leave shared collection" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        assert_difference "CollectionShare.count", -1 do
+          delete "/api/v1/collections/#{@collection.apikey}/leave",
+                 headers: auth_headers(@other_owner), as: :json
+        end
+        assert_response :no_content
+      end
+
+      test "leave returns 404 if not shared with user" do
+        delete "/api/v1/collections/#{@collection.apikey}/leave",
+               headers: auth_headers(@other_owner), as: :json
+        assert_response :not_found
+      end
+
+      # --- Shared collection visibility ---
+
+      test "shared collection appears in index for recipient" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        get "/api/v1/collections",
+            headers: auth_headers(@other_owner), as: :json
+        assert_response :ok
+        body = JSON.parse(response.body)
+        ids = body["data"].map { |c| c["id"] }
+        assert_includes ids, @collection.apikey
+      end
+
+      test "shared collection show works for recipient" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        get "/api/v1/collections/#{@collection.apikey}",
+            headers: auth_headers(@other_owner), as: :json
+        assert_response :ok
+      end
+
+      test "shared collection is_shared flag is true for recipient" do
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        get "/api/v1/collections",
+            headers: auth_headers(@other_owner), as: :json
+        body = JSON.parse(response.body)
+        shared = body["data"].find { |c| c["id"] == @collection.apikey }
+        assert_equal true, shared["is_shared"]
+      end
+
+      # --- Export ---
+
+      test "export returns JSON file" do
+        @collection.collection_recipes.create!(recipe: @recipe)
+        @collection.collection_recipes.create!(recipe: @recipe2)
+        get "/api/v1/collections/#{@collection.apikey}/export",
+            headers: auth_headers(@owner)
+        assert_response :ok
+        assert_equal "application/json", response.content_type
+        recipes = JSON.parse(response.body)
+        assert_equal 2, recipes.size
+        assert_equal "Beef Stew", recipes.first["title"]
+      end
+
+      test "export works for shared collection recipient" do
+        @collection.collection_recipes.create!(recipe: @recipe)
+        @collection.collection_shares.create!(shared_with: @other_owner)
+        get "/api/v1/collections/#{@collection.apikey}/export",
+            headers: auth_headers(@other_owner)
+        assert_response :ok
+      end
     end
 
     # --- Collection Recipes ---
@@ -371,6 +518,45 @@ module Api
         delete "/api/v1/collections/nonexistent/recipes/#{@recipe.apikey}",
                headers: auth_headers(@owner), as: :json
         assert_response :not_found
+      end
+
+      # --- Copy recipe ---
+
+      test "copy recipe from shared collection to own household" do
+        @collection.collection_recipes.create!(recipe: @recipe)
+        @collection.collection_shares.create!(shared_with: @other_owner)
+
+        assert_difference "Recipe.count", 1 do
+          post "/api/v1/collections/#{@collection.apikey}/recipes/#{@recipe.apikey}/copy",
+               headers: auth_headers(@other_owner), as: :json
+        end
+        assert_response :created
+        body = JSON.parse(response.body)
+        assert_equal "Beef Stew", body["data"]["title"]
+
+        # Copy is in the other household, not the original
+        copy = Recipe.find_by_apikey!(body["data"]["id"])
+        assert_equal @other_household.id, copy.household_id
+        assert_equal @other_owner.id, copy.contributed_by_id
+        assert_includes copy.notes, "From #{@owner.name}'s \"#{@collection.name}\" collection"
+      end
+
+      test "copy recipe forbidden without access" do
+        @collection.collection_recipes.create!(recipe: @recipe)
+
+        post "/api/v1/collections/#{@collection.apikey}/recipes/#{@recipe.apikey}/copy",
+             headers: auth_headers(@other_owner), as: :json
+        assert_response :forbidden
+      end
+
+      test "copy recipe works for own household collection" do
+        @collection.collection_recipes.create!(recipe: @recipe)
+
+        assert_difference "Recipe.count", 1 do
+          post "/api/v1/collections/#{@collection.apikey}/recipes/#{@recipe.apikey}/copy",
+               headers: auth_headers(@owner), as: :json
+        end
+        assert_response :created
       end
     end
   end

@@ -43,6 +43,54 @@ module Api
         }, status: :not_found
       end
 
+      # POST /api/v1/collections/:collection_apikey/recipes/:apikey/copy
+      # Copies a recipe from a shared collection into the current user's household.
+      def copy
+        return unless authorize!(@collection, :copy_recipe?)
+
+        source = @collection.recipes.find_by_apikey!(params[:apikey])
+
+        provenance = "From #{@collection.user.name}'s \"#{@collection.name}\" collection"
+        notes = [provenance, source.notes.presence].compact.join("\n\n")
+
+        copy = Current.household.recipes.build(
+          contributed_by: current_user,
+          recipe_type: source.recipe_type,
+          title: source.title,
+          description: source.description,
+          category: source.category,
+          cuisine: source.cuisine,
+          tags: source.tags,
+          primary_protein: source.primary_protein,
+          prep_time_minutes: source.prep_time_minutes,
+          cook_time_minutes: source.cook_time_minutes,
+          difficulty: source.difficulty,
+          servings: source.servings,
+          source_url: source.source_url,
+          image_url: source.image_url,
+          notes: notes,
+          ingredient_groups: source.ingredient_groups,
+          instructions: source.instructions
+        )
+
+        if copy.save
+          render json: {
+            data: {
+              id: copy.apikey,
+              title: copy.title
+            }
+          }, status: :created
+        else
+          render json: {
+            error: { code: "validation_failed", message: copy.errors.full_messages.first }
+          }, status: :unprocessable_entity
+        end
+      rescue ActiveRecord::RecordNotFound
+        render json: {
+          error: { code: "not_found", message: "Recipe not found in this collection" }
+        }, status: :not_found
+      end
+
       private
 
       def load_collection

@@ -5,6 +5,8 @@ class RecipeCollection < ApplicationRecord
   belongs_to :household
   has_many :collection_recipes, dependent: :destroy
   has_many :recipes, through: :collection_recipes
+  has_many :collection_shares, dependent: :destroy
+  has_many :shared_users, through: :collection_shares, source: :shared_with
 
   validates :apikey, presence: true, uniqueness: true
   validates :name, presence: true

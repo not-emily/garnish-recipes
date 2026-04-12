@@ -1,6 +1,6 @@
 import { api } from "./client";
 import type { ApiResponse } from "@/types";
-import type { Collection, CollectionSummary, CollectionInput } from "@/types/collection";
+import type { Collection, CollectionSummary, CollectionInput, CollectionShareEntry } from "@/types/collection";
 
 export function listCollections(q?: string) {
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
@@ -55,4 +55,49 @@ export function removeRecipeFromCollection(collectionApikey: string, recipeApike
   return api<void>(`/collections/${collectionApikey}/recipes/${recipeApikey}`, {
     method: "DELETE",
   });
+}
+
+// --- Sharing ---
+
+export function listShares(collectionApikey: string) {
+  return api<ApiResponse<CollectionShareEntry[]>>(
+    `/collections/${collectionApikey}/shares`
+  );
+}
+
+export function shareCollection(collectionApikey: string, email: string) {
+  return api<ApiResponse<CollectionShareEntry>>(
+    `/collections/${collectionApikey}/shares`,
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }
+  );
+}
+
+export function revokeShare(collectionApikey: string, shareId: number) {
+  return api<void>(`/collections/${collectionApikey}/shares/${shareId}`, {
+    method: "DELETE",
+  });
+}
+
+export function leaveCollection(collectionApikey: string) {
+  return api<void>(`/collections/${collectionApikey}/leave`, {
+    method: "DELETE",
+  });
+}
+
+// --- Copy ---
+
+export function copyRecipe(collectionApikey: string, recipeApikey: string) {
+  return api<ApiResponse<{ id: string; title: string }>>(
+    `/collections/${collectionApikey}/recipes/${recipeApikey}/copy`,
+    { method: "POST" }
+  );
+}
+
+// --- Export ---
+
+export function getExportUrl(collectionApikey: string) {
+  return `/api/v1/collections/${collectionApikey}/export`;
 }

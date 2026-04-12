@@ -5,6 +5,7 @@ import type { RecipeSummary } from "@/types/recipe";
 
 interface RecipeCardProps {
   recipe: RecipeSummary;
+  linkState?: Record<string, unknown>;
 }
 
 const TYPE_BADGE = {
@@ -13,7 +14,7 @@ const TYPE_BADGE = {
   event: { icon: Calendar, label: "Event" },
 } as const;
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({ recipe, linkState }: RecipeCardProps) {
   const badge = TYPE_BADGE[recipe.recipe_type];
   const TypeIcon = badge?.icon;
   // Defensive: a recipe should always have a title, but in-flight imports
@@ -29,6 +30,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     >
       <Link
         to={`/recipes/${recipe.id}`}
+        state={linkState}
         className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
       >
         <div className="relative aspect-[4/3] bg-gradient-to-br from-garnish-50 to-garnish-100">

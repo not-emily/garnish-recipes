@@ -155,6 +155,27 @@ module Api
         assert_response :not_found
       end
 
+      test "show allows viewing recipe from shared collection" do
+        collection = @household.recipe_collections.create!(user: @owner, name: "Shared Favs")
+        collection.collection_recipes.create!(recipe: @recipe)
+        collection.collection_shares.create!(shared_with: @other_owner)
+
+        get "/api/v1/recipes/#{@recipe.apikey}?collection=#{collection.apikey}",
+            headers: auth_headers(@other_owner), as: :json
+        assert_response :ok
+        body = JSON.parse(response.body)
+        assert_equal @recipe.apikey, body["data"]["id"]
+      end
+
+      test "show returns 404 for recipe via unshared collection" do
+        collection = @household.recipe_collections.create!(user: @owner, name: "Private")
+        collection.collection_recipes.create!(recipe: @recipe)
+
+        get "/api/v1/recipes/#{@recipe.apikey}?collection=#{collection.apikey}",
+            headers: auth_headers(@other_owner), as: :json
+        assert_response :not_found
+      end
+
       # --- Collections membership ---
 
       test "collections returns user's collections with has_recipe flag" do

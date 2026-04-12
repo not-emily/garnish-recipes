@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_12_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_12_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,6 +51,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_100000) do
     t.index ["recipe_collection_id", "recipe_id"], name: "idx_collection_recipes_unique", unique: true
     t.index ["recipe_collection_id"], name: "index_collection_recipes_on_recipe_collection_id"
     t.index ["recipe_id"], name: "index_collection_recipes_on_recipe_id"
+  end
+
+  create_table "collection_shares", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "permission", default: "view", null: false
+    t.bigint "recipe_collection_id", null: false
+    t.bigint "shared_with_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recipe_collection_id", "shared_with_id"], name: "idx_collection_shares_unique", unique: true
+    t.index ["recipe_collection_id"], name: "index_collection_shares_on_recipe_collection_id"
+    t.index ["shared_with_id"], name: "index_collection_shares_on_shared_with_id"
   end
 
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -326,6 +337,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_100000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "collection_recipes", "recipe_collections"
   add_foreign_key "collection_recipes", "recipes"
+  add_foreign_key "collection_shares", "recipe_collections"
+  add_foreign_key "collection_shares", "users", column: "shared_with_id"
   add_foreign_key "grocery_list_items", "grocery_lists"
   add_foreign_key "grocery_list_items", "users", column: "added_by_id"
   add_foreign_key "grocery_lists", "households"

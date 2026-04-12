@@ -24,8 +24,9 @@ export function listRecipes(filters: RecipeFilters = {}) {
   return api<ApiResponse<RecipeSummary[]>>(`/recipes${buildQueryString(filters)}`);
 }
 
-export function getRecipe(apikey: string) {
-  return api<ApiResponse<Recipe>>(`/recipes/${apikey}`);
+export function getRecipe(apikey: string, collectionApikey?: string) {
+  const qs = collectionApikey ? `?collection=${encodeURIComponent(collectionApikey)}` : "";
+  return api<ApiResponse<Recipe>>(`/recipes/${apikey}${qs}`);
 }
 
 export function createRecipe(input: RecipeInput) {

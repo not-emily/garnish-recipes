@@ -43,7 +43,11 @@ module Api
 
       # GET /api/v1/recipes/:apikey
       def show
-        return unless authorize!(@recipe)
+        # If loaded through a shared collection, access was already verified
+        # in load_recipe — skip the household-scoped policy check.
+        unless @loaded_via_collection
+          return unless authorize!(@recipe)
+        end
         render json: { data: serialize_recipe(@recipe, full: true) }
       end
 
@@ -109,6 +113,21 @@ module Api
       def load_recipe
         @recipe = Current.household.recipes.find_by_apikey!(params[:apikey])
       rescue ActiveRecord::RecordNotFound
+        # If a collection param is provided, try loading the recipe through a
+        # shared collection. This allows shared collection recipients to view
+        # recipes that belong to another household.
+        if params[:collection].present?
+          collection = RecipeCollection.find_by(apikey: params[:collection])
+          if collection
+            policy = CollectionPolicy.new(Current.membership, collection)
+            if policy.show?[:allowed]
+              @recipe = collection.recipes.find_by_apikey!(params[:apikey])
+              @loaded_via_collection = true
+              return
+            end
+          end
+        end
+
         render json: {
           error: { code: "not_found", message: "Recipe not found" }
         }, status: :not_found

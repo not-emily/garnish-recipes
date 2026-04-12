@@ -13,8 +13,11 @@ import {
   Timer,
   AlertCircle,
   FolderPlus,
+  Copy,
+  Check,
 } from "lucide-react";
 import { getRecipe, deleteRecipe } from "@/api/recipes";
+import { copyRecipe } from "@/api/collections";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
@@ -34,18 +37,29 @@ export function RecipeDetail() {
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
 
-  // Referrer-aware back link. When the user clicked into this page from the
-  // meal plan, sending them "back to Recipes" fights their autopilot — send
-  // them back to Meal Plan instead. Other entry points (direct link, main
-  // recipe browser, bookmark, refresh) fall through to the default.
+  const [copied, setCopied] = useState(false);
+
+  // Referrer-aware back link and collection context for shared recipes.
+  const locState = location.state as {
+    from?: string;
+    collectionApikey?: string;
+    collectionName?: string;
+    isSharedCollection?: boolean;
+  } | null;
+
+  const collectionApikey = locState?.collectionApikey;
+  const isSharedRecipe = locState?.isSharedCollection === true;
+
   const backLink =
-    (location.state as { from?: string } | null)?.from === "mealPlan"
+    locState?.from === "mealPlan"
       ? { to: "/meal-plan", label: "Meal Plan" }
-      : { to: "/recipes", label: "Recipes" };
+      : locState?.from === "collection" && collectionApikey
+        ? { to: `/collections/${collectionApikey}`, label: locState.collectionName ?? "Collection" }
+        : { to: "/recipes", label: "Recipes" };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["recipe", apikey],
-    queryFn: () => getRecipe(apikey!),
+    queryKey: ["recipe", apikey, collectionApikey],
+    queryFn: () => getRecipe(apikey!, collectionApikey),
     enabled: !!apikey,
   });
 
@@ -54,6 +68,15 @@ export function RecipeDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
       navigate("/recipes");
+    },
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: () => copyRecipe(collectionApikey!, apikey!),
+    onSuccess: () => {
+      setCopied(true);
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      setTimeout(() => setCopied(false), 3000);
     },
   });
 
@@ -132,43 +155,68 @@ export function RecipeDetail() {
           {backLink.label}
         </Link>
 
-        <div className="flex items-center gap-1">
+        {isSharedRecipe ? (
           <button
             type="button"
-            onClick={() => setCollectionModalOpen(true)}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-            aria-label="Add to collection"
+            onClick={() => copyMutation.mutate()}
+            disabled={copied || copyMutation.isPending}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition-colors ${
+              copied
+                ? "bg-garnish-600 text-white"
+                : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
           >
-            <FolderPlus className="h-4 w-4" />
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied to My Recipes
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy to My Recipes
+              </>
+            )}
           </button>
-          {canEdit && (
-            <>
-              <Link
-                to={`/recipes/${recipe.id}/edit`}
-                className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-                aria-label="Edit recipe"
-              >
-                <Pencil className="h-4 w-4" />
-              </Link>
-              <button
-                type="button"
-                onClick={handleExport}
-                className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-                aria-label="Export recipe"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                aria-label="Delete recipe"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </>
-          )}
-        </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCollectionModalOpen(true)}
+              className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+              aria-label="Add to collection"
+            >
+              <FolderPlus className="h-4 w-4" />
+            </button>
+            {canEdit && (
+              <>
+                <Link
+                  to={`/recipes/${recipe.id}/edit`}
+                  className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+                  aria-label="Edit recipe"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+                  aria-label="Export recipe"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                  aria-label="Delete recipe"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Needs-review banner — shown for recipes that were imported but

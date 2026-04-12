@@ -71,6 +71,12 @@ Rails.application.routes.draw do
       delete "collections/:apikey",                                  to: "collections#destroy"
       post   "collections/:collection_apikey/recipes",               to: "collection_recipes#create"
       delete "collections/:collection_apikey/recipes/:apikey",       to: "collection_recipes#destroy"
+      post   "collections/:collection_apikey/recipes/:apikey/copy",  to: "collection_recipes#copy"
+      get    "collections/:apikey/shares",                           to: "collections#shares"
+      post   "collections/:apikey/shares",                           to: "collections#create_share"
+      delete "collections/:apikey/shares/:share_id",                 to: "collections#destroy_share"
+      delete "collections/:apikey/leave",                            to: "collections#leave"
+      get    "collections/:apikey/export",                           to: "collections#export"
 
       # Leftover tray — household-scoped surplus from cooked meals that
       # haven't been assigned to a slot yet. Items expire after

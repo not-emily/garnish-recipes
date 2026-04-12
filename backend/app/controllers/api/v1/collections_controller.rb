@@ -4,7 +4,7 @@ module Api
       before_action :authenticate!
       include HouseholdScoped
 
-      before_action :load_collection, only: [:show, :update, :destroy]
+      before_action :load_collection, only: [:show, :update, :destroy, :shares, :create_share, :destroy_share, :leave, :export]
 
       # GET /api/v1/collections
       def index
@@ -59,6 +59,111 @@ module Api
         head :no_content
       end
 
+      # --- Sharing ---
+
+      # GET /api/v1/collections/:apikey/shares
+      def shares
+        return unless authorize!(@collection, :share?)
+
+        shares = @collection.collection_shares.includes(:shared_with)
+        render json: {
+          data: shares.map { |s|
+            {
+              id: s.id,
+              user: { id: s.shared_with.apikey, name: s.shared_with.name, email: s.shared_with.email },
+              permission: s.permission,
+              created_at: s.created_at
+            }
+          }
+        }
+      end
+
+      # POST /api/v1/collections/:apikey/shares
+      def create_share
+        return unless authorize!(@collection, :share?)
+
+        email = params[:email].to_s.strip.downcase
+        target_user = User.find_by(email: email)
+
+        unless target_user
+          return render json: {
+            error: { code: "not_found", message: "No user found with that email" }
+          }, status: :not_found
+        end
+
+        if target_user.id == current_user.id
+          return render json: {
+            error: { code: "validation_failed", message: "You can't share a collection with yourself" }
+          }, status: :unprocessable_entity
+        end
+
+        share = @collection.collection_shares.build(shared_with: target_user)
+
+        if share.save
+          render json: {
+            data: {
+              id: share.id,
+              user: { id: target_user.apikey, name: target_user.name, email: target_user.email },
+              permission: share.permission,
+              created_at: share.created_at
+            }
+          }, status: :created
+        else
+          render json: {
+            error: { code: "validation_failed", message: share.errors.full_messages.first }
+          }, status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /api/v1/collections/:apikey/shares/:id
+      def destroy_share
+        share = @collection.collection_shares.find_by(id: params[:share_id])
+        unless share
+          return render json: {
+            error: { code: "not_found", message: "Share not found" }
+          }, status: :not_found
+        end
+
+        # Owner can revoke any share; shared user can remove themselves
+        unless @collection.owned_by?(current_user) || share.shared_with_id == current_user.id
+          return render json: {
+            error: { code: "forbidden", message: "Not authorized" }
+          }, status: :forbidden
+        end
+
+        share.destroy!
+        head :no_content
+      end
+
+      # DELETE /api/v1/collections/:apikey/leave
+      # Shared recipient removes themselves from a shared collection.
+      def leave
+        share = @collection.collection_shares.find_by(shared_with: current_user)
+        unless share
+          return render json: {
+            error: { code: "not_found", message: "You are not a shared member of this collection" }
+          }, status: :not_found
+        end
+
+        share.destroy!
+        head :no_content
+      end
+
+      # --- Export ---
+
+      # GET /api/v1/collections/:apikey/export
+      def export
+        return unless authorize!(@collection, :export?)
+
+        recipes = @collection.recipes.includes(:contributed_by)
+        json = JSON.pretty_generate(recipes.map { |r| serialize_recipe_export(r) })
+
+        send_data json,
+                  type: "application/json",
+                  disposition: "attachment",
+                  filename: "#{@collection.name.parameterize}-recipes.json"
+      end
+
       private
 
       def load_collection
@@ -74,6 +179,9 @@ module Api
       end
 
       def serialize_collection(collection, full: false)
+        is_shared = !collection.owned_by?(current_user) &&
+                    collection.household_id != Current.household&.id
+
         base = {
           id: collection.apikey,
           name: collection.name,
@@ -81,6 +189,8 @@ module Api
           visibility: collection.visibility,
           recipe_count: collection.collection_recipes.size,
           is_mine: collection.user_id == current_user.id,
+          is_shared: is_shared,
+          share_count: collection.owned_by?(current_user) ? collection.collection_shares.size : nil,
           owner: {
             id: collection.user.apikey,
             name: collection.user.name
@@ -119,6 +229,29 @@ module Api
           times_cooked: recipe.times_cooked,
           last_cooked_at: recipe.last_cooked_at,
           updated_at: recipe.updated_at
+        }
+      end
+
+      def serialize_recipe_export(recipe)
+        {
+          title: recipe.title,
+          recipe_type: recipe.recipe_type,
+          description: recipe.description,
+          category: recipe.category,
+          cuisine: recipe.cuisine,
+          tags: recipe.tags,
+          primary_protein: recipe.primary_protein,
+          prep_time_minutes: recipe.prep_time_minutes,
+          cook_time_minutes: recipe.cook_time_minutes,
+          total_time_minutes: recipe.total_time_minutes,
+          difficulty: recipe.difficulty,
+          servings: recipe.servings,
+          source_url: recipe.source_url,
+          image_url: recipe.image_url,
+          notes: recipe.notes,
+          ingredient_groups: recipe.ingredient_groups,
+          instructions: recipe.instructions,
+          contributed_by: recipe.contributed_by.name
         }
       end
 

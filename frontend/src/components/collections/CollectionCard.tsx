@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { BookOpen, Lock, Users } from "lucide-react";
+import { BookOpen, Lock, Users, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { CollectionSummary } from "@/types/collection";
 
@@ -24,12 +24,18 @@ export function CollectionCard({ collection }: CollectionCardProps) {
           <span className="text-5xl font-light text-garnish-300">{initial}</span>
 
           <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-gray-700 backdrop-blur-sm">
-            {collection.visibility === "private" ? (
+            {collection.is_shared ? (
+              <Share2 className="h-3 w-3" />
+            ) : collection.visibility === "private" ? (
               <Lock className="h-3 w-3" />
             ) : (
               <Users className="h-3 w-3" />
             )}
-            {collection.visibility === "private" ? "Private" : "Household"}
+            {collection.is_shared
+              ? "Shared"
+              : collection.visibility === "private"
+                ? "Private"
+                : "Household"}
           </div>
         </div>
 
