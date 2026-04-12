@@ -7,6 +7,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api, setAccessToken, setSessionExpiredHandler } from "@/api/client";
 import { resetConsumer } from "@/lib/cable";
 import type { User, ApiResponse } from "@/types";
@@ -28,6 +29,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const restoreStarted = useRef(false);
@@ -105,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
     resetConsumer();
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   // Handle session expiration triggered from the API client
   // (e.g., refresh token rejected, multi-tab race, etc.)
@@ -113,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
     resetConsumer();
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   useEffect(() => {
     setSessionExpiredHandler(handleSessionExpired);

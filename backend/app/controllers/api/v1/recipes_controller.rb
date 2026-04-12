@@ -41,6 +41,39 @@ module Api
         }
       end
 
+      # GET /api/v1/recipes/smart_sections
+      def smart_sections
+        base = policy_scope(Recipe)
+                 .where("import_status IS DISTINCT FROM ?", Recipe.import_statuses[:importing])
+                 .where.not(recipe_type: "event")
+        limit = 10
+
+        render json: {
+          data: {
+            recently_used: base.where("last_cooked_at > ?", 30.days.ago)
+                               .order(last_cooked_at: :desc)
+                               .limit(limit)
+                               .map { |r| serialize_recipe(r) },
+            favorites: base.where("rating_count > 0")
+                           .order(average_rating: :desc)
+                           .limit(limit)
+                           .map { |r| serialize_recipe(r) },
+            havent_made_in_a_while: base.where(last_cooked_at: 180.days.ago..30.days.ago)
+                                       .order(last_cooked_at: :asc)
+                                       .limit(limit)
+                                       .map { |r| serialize_recipe(r) },
+            never_tried: base.where(times_cooked: 0)
+                             .order(created_at: :desc)
+                             .limit(limit)
+                             .map { |r| serialize_recipe(r) },
+            quick_meals: base.where(recipe_type: "quick_meal")
+                             .order(updated_at: :desc)
+                             .limit(limit)
+                             .map { |r| serialize_recipe(r) }
+          }
+        }
+      end
+
       # GET /api/v1/recipes/:apikey
       def show
         # If loaded through a shared collection, access was already verified
@@ -198,6 +231,8 @@ module Api
           image_url: recipe.image_url,
           times_cooked: recipe.times_cooked,
           last_cooked_at: recipe.last_cooked_at,
+          average_rating: recipe.average_rating&.to_f,
+          rating_count: recipe.rating_count,
           updated_at: recipe.updated_at
         }
         return base unless full
@@ -210,6 +245,7 @@ module Api
           import_status: recipe.import_status,
           import_source_type: recipe.import_source_type,
           import_error: recipe.import_error,
+          my_rating: recipe.recipe_ratings.find_by(user: current_user)&.score,
           contributed_by: {
             id: recipe.contributed_by.apikey,
             name: recipe.contributed_by.name

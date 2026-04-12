@@ -228,6 +228,8 @@ module Api
           image_url: recipe.image_url,
           times_cooked: recipe.times_cooked,
           last_cooked_at: recipe.last_cooked_at,
+          average_rating: recipe.average_rating&.to_f,
+          rating_count: recipe.rating_count,
           updated_at: recipe.updated_at
         }
       end

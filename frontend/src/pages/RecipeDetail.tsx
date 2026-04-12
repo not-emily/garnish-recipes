@@ -23,6 +23,8 @@ import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddToCollectionModal } from "@/components/collections/AddToCollectionModal";
+import { RatingStars } from "@/components/recipes/RatingStars";
+import { upsertRating, deleteRating } from "@/api/ratings";
 
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
@@ -77,6 +79,44 @@ export function RecipeDetail() {
       setCopied(true);
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
       setTimeout(() => setCopied(false), 3000);
+    },
+  });
+
+  const queryKey = ["recipe", apikey, collectionApikey] as const;
+
+  const rateMutation = useMutation({
+    mutationFn: (score: number | null) =>
+      score === null ? deleteRating(apikey!) : upsertRating(apikey!, score),
+    onMutate: (score) => {
+      queryClient.setQueryData(
+        queryKey,
+        (old: { data: typeof recipe } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: { ...old.data, my_rating: score },
+          };
+        }
+      );
+    },
+    onSuccess: (res) => {
+      queryClient.setQueryData(
+        queryKey,
+        (old: { data: typeof recipe } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              my_rating: "score" in res.data ? res.data.score : null,
+              average_rating: res.data.average_rating,
+              rating_count: res.data.rating_count,
+            },
+          };
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["smart-sections"] });
     },
   });
 
@@ -329,6 +369,34 @@ export function RecipeDetail() {
       {recipe.notes && (
         <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{recipe.notes}</p>
+        </section>
+      )}
+
+      {/* Rating */}
+      {!isSharedRecipe && (
+        <section className="mt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-gray-500">Your Rating</h2>
+              <div className="mt-1">
+                <RatingStars
+                  value={recipe.my_rating}
+                  onChange={(score) => rateMutation.mutate(score)}
+                />
+              </div>
+            </div>
+            {recipe.rating_count > 0 && (
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-500">Household</p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <RatingStars value={recipe.average_rating ?? 0} readonly size="sm" />
+                  <span className="text-sm text-gray-500">
+                    {recipe.average_rating?.toFixed(1)} ({recipe.rating_count})
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       )}
 

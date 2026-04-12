@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Clock, Users, Snowflake, Calendar } from "lucide-react";
+import { Clock, Users, Snowflake, Calendar, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import type { RecipeSummary } from "@/types/recipe";
 
@@ -69,6 +69,12 @@ export function RecipeCard({ recipe, linkState }: RecipeCardProps) {
           )}
 
           <div className="mt-auto flex items-center gap-3 pt-2 text-xs text-gray-400">
+            {recipe.rating_count > 0 && recipe.average_rating != null && (
+              <span className="flex items-center gap-0.5">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                {recipe.average_rating.toFixed(1)}
+              </span>
+            )}
             {recipe.total_time_minutes && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />

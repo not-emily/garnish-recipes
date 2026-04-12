@@ -5,6 +5,7 @@ import { listRecipes } from "@/api/recipes";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import type { RecipeFilters, RecipeType } from "@/types/recipe";
 import { RecipeCard } from "./RecipeCard";
+import { SmartBrowse } from "./SmartBrowse";
 
 // Events aren't surfaced in the main library — they only exist as meal
 // plan annotations. The meal plan picker has its own Event tab.
@@ -78,11 +79,14 @@ export function RecipeBrowser() {
 
   return (
     <div className="space-y-4">
+      {/* Smart browse sections — hidden when filtering */}
+      {!hasFilters && <SmartBrowse />}
+
       {/* Search bar */}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
-          type="search"
+          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search recipes..."
@@ -138,16 +142,6 @@ export function RecipeBrowser() {
             </button>
           ))}
         </div>
-      )}
-
-      {hasFilters && (
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="text-xs text-gray-500 hover:text-gray-700 underline"
-        >
-          Clear filters
-        </button>
       )}
 
       {/* Results */}

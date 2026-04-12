@@ -19,6 +19,7 @@ class Recipe < ApplicationRecord
   has_many :meal_plan_entries, dependent: :destroy
   has_many :collection_recipes, dependent: :destroy
   has_many :recipe_collections, through: :collection_recipes
+  has_many :recipe_ratings, dependent: :destroy
 
   # Original source material for an imported recipe — the PDF or image the
   # user uploaded, attached so they can re-reference or re-process it later.
@@ -67,6 +68,29 @@ class Recipe < ApplicationRecord
 
   def self.find_by_apikey!(apikey)
     find_by!(apikey: apikey)
+  end
+
+  # --- Cooking stats ---
+  # Updated by MealPlanEntry after_commit when non-leftover entries are
+  # created or destroyed for dates in the past or today.
+
+  def update_cooking_stats!(date)
+    new_values = { times_cooked: times_cooked + 1 }
+    if last_cooked_at.nil? || date > last_cooked_at
+      new_values[:last_cooked_at] = date
+    end
+    update_columns(new_values)
+  end
+
+  def recalculate_cooking_stats!
+    entries = meal_plan_entries
+                .where(is_leftover: false)
+                .where("date <= ?", Date.current)
+
+    update_columns(
+      times_cooked: entries.count,
+      last_cooked_at: entries.maximum(:date)
+    )
   end
 
   # Returns a flat list of all ingredients across all groups, used for grocery

@@ -1,6 +1,6 @@
 import { api } from "./client";
 import type { ApiResponse } from "@/types";
-import type { Recipe, RecipeSummary, RecipeInput, RecipeFilters } from "@/types/recipe";
+import type { Recipe, RecipeSummary, RecipeInput, RecipeFilters, SmartSections } from "@/types/recipe";
 
 function buildQueryString(filters: RecipeFilters): string {
   const params = new URLSearchParams();
@@ -22,6 +22,10 @@ function buildQueryString(filters: RecipeFilters): string {
 
 export function listRecipes(filters: RecipeFilters = {}) {
   return api<ApiResponse<RecipeSummary[]>>(`/recipes${buildQueryString(filters)}`);
+}
+
+export function getSmartSections() {
+  return api<ApiResponse<SmartSections>>("/recipes/smart_sections");
 }
 
 export function getRecipe(apikey: string, collectionApikey?: string) {

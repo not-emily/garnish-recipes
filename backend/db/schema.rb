@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_12_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_12_300000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -277,8 +277,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_200000) do
     t.index ["user_id"], name: "index_recipe_collections_on_user_id"
   end
 
+  create_table "recipe_ratings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "recipe_id", null: false
+    t.integer "score", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["recipe_id", "user_id"], name: "index_recipe_ratings_on_recipe_id_and_user_id", unique: true
+    t.index ["recipe_id"], name: "index_recipe_ratings_on_recipe_id"
+    t.index ["user_id"], name: "index_recipe_ratings_on_user_id"
+  end
+
   create_table "recipes", force: :cascade do |t|
     t.string "apikey", null: false
+    t.decimal "average_rating", precision: 3, scale: 2
     t.string "category"
     t.bigint "contributed_by_id", null: false
     t.integer "cook_time_minutes"
@@ -298,6 +310,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_200000) do
     t.text "notes"
     t.integer "prep_time_minutes"
     t.string "primary_protein"
+    t.integer "rating_count", default: 0, null: false
     t.string "recipe_type", default: "full", null: false
     t.integer "servings"
     t.string "source_url"
@@ -353,6 +366,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_200000) do
   add_foreign_key "meal_plans", "households"
   add_foreign_key "recipe_collections", "households"
   add_foreign_key "recipe_collections", "users"
+  add_foreign_key "recipe_ratings", "recipes"
+  add_foreign_key "recipe_ratings", "users"
   add_foreign_key "recipes", "households"
   add_foreign_key "recipes", "users", column: "contributed_by_id"
 end

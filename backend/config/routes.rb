@@ -26,10 +26,14 @@ Rails.application.routes.draw do
 
       # Recipes
       get "recipes", to: "recipes#index"
+      get "recipes/smart_sections", to: "recipes#smart_sections"
       post "recipes", to: "recipes#create"
       get "recipes/:apikey", to: "recipes#show"
       patch "recipes/:apikey", to: "recipes#update"
       delete "recipes/:apikey", to: "recipes#destroy"
+      get    "recipes/:apikey/ratings",     to: "ratings#index"
+      post   "recipes/:apikey/ratings",     to: "ratings#upsert"
+      delete "recipes/:apikey/ratings",     to: "ratings#destroy"
       get    "recipes/:apikey/collections", to: "recipes#collections"
 
       # Recipe imports

@@ -89,6 +89,8 @@ export interface RecipeSummary {
   image_url?: string | null;
   times_cooked: number;
   last_cooked_at?: string | null;
+  average_rating?: number | null;
+  rating_count: number;
   updated_at: string;
 }
 
@@ -101,6 +103,7 @@ export interface Recipe extends RecipeSummary {
   ingredient_groups: IngredientGroup[];
   instructions: InstructionStep[];
   contributed_by: { id: string; name: string };
+  my_rating?: number | null;
   import_status?: ImportStatus | null;
   import_source_type?: ImportSourceType | null;
   import_error?: string | null;
@@ -133,6 +136,14 @@ export interface RecipeInput {
   image_url?: string | null;
   ingredient_groups?: IngredientGroup[];
   instructions?: InstructionStep[];
+}
+
+export interface SmartSections {
+  recently_used: RecipeSummary[];
+  favorites: RecipeSummary[];
+  havent_made_in_a_while: RecipeSummary[];
+  never_tried: RecipeSummary[];
+  quick_meals: RecipeSummary[];
 }
 
 export interface RecipeFilters {

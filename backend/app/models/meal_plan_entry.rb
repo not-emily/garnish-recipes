@@ -26,6 +26,7 @@ class MealPlanEntry < ApplicationRecord
   # grocery generation simple — it can just filter by the flag without
   # having to also check entry kind.
   before_validation :coerce_grocery_flag
+  after_commit :update_recipe_cooking_stats, on: [:create, :destroy]
 
   scope :for_week, ->(week_start) {
     start_date = week_start.to_date
@@ -67,5 +68,14 @@ class MealPlanEntry < ApplicationRecord
 
   def coerce_grocery_flag
     self.include_in_grocery = false unless grocery_relevant?
+  end
+
+  def update_recipe_cooking_stats
+    return unless recipe_id.present? && !is_leftover && date <= Date.current
+    if destroyed?
+      recipe.recalculate_cooking_stats!
+    else
+      recipe.update_cooking_stats!(date)
+    end
   end
 end
