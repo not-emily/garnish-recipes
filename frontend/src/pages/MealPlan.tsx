@@ -249,3 +249,5 @@ export function MealPlan() {
     </div>
   );
 }
+
+export default MealPlan;

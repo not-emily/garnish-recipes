@@ -1,13 +1,16 @@
+import { Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { HouseholdSettings } from "@/components/household/HouseholdSettings";
 import { MemberList } from "@/components/household/MemberList";
 import { InviteFlow } from "@/components/household/InviteFlow";
 import { ApiKeyForm } from "@/components/settings/ApiKeyForm";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export function Settings() {
   const { user, logout } = useAuth();
   const { household } = useHousehold();
+  const { canInstall, promptInstall } = usePWAInstall();
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-6 pb-8 space-y-6">
@@ -56,6 +59,19 @@ export function Settings() {
         <ApiKeyForm />
       </section>
 
+      {/* Install app */}
+      {canInstall && (
+        <section>
+          <button
+            onClick={promptInstall}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-garnish-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-garnish-700"
+          >
+            <Download className="h-4 w-4" />
+            Install Garnish
+          </button>
+        </section>
+      )}
+
       {/* Sign out */}
       <section>
         <button
@@ -68,3 +84,5 @@ export function Settings() {
     </div>
   );
 }
+
+export default Settings;

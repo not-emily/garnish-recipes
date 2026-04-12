@@ -109,3 +109,5 @@ export function RecipeNew() {
     </div>
   );
 }
+
+export default RecipeNew;

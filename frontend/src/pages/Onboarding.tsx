@@ -211,3 +211,5 @@ function JoinForm({ onBack }: { onBack: () => void }) {
     </form>
   );
 }
+
+export default Onboarding;

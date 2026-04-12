@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -5,19 +6,22 @@ import { HouseholdProvider, useHousehold } from "@/contexts/HouseholdContext";
 import { useSessionLoading } from "@/hooks/useSessionLoading";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { AppShell } from "@/components/layout/AppShell";
-import { Login } from "@/pages/Login";
-import { Signup } from "@/pages/Signup";
-import { Onboarding } from "@/pages/Onboarding";
-import { Recipes } from "@/pages/Recipes";
-import { RecipeDetail } from "@/pages/RecipeDetail";
-import { RecipeNew } from "@/pages/RecipeNew";
-import { RecipeEdit } from "@/pages/RecipeEdit";
-import { MealPlan } from "@/pages/MealPlan";
-import { GroceryList } from "@/pages/GroceryList";
-import { Collections } from "@/pages/Collections";
-import { CollectionDetail } from "@/pages/CollectionDetail";
-import { Settings } from "@/pages/Settings";
-import type { ReactNode } from "react";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { ToastProvider } from "@/components/ui/Toast";
+
+// Lazy-loaded pages — each gets its own chunk
+const Login = lazy(() => import("@/pages/Login"));
+const Signup = lazy(() => import("@/pages/Signup"));
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const Recipes = lazy(() => import("@/pages/Recipes"));
+const RecipeDetail = lazy(() => import("@/pages/RecipeDetail"));
+const RecipeNew = lazy(() => import("@/pages/RecipeNew"));
+const RecipeEdit = lazy(() => import("@/pages/RecipeEdit"));
+const MealPlan = lazy(() => import("@/pages/MealPlan"));
+const GroceryList = lazy(() => import("@/pages/GroceryList"));
+const Collections = lazy(() => import("@/pages/Collections"));
+const CollectionDetail = lazy(() => import("@/pages/CollectionDetail"));
+const Settings = lazy(() => import("@/pages/Settings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,7 +53,7 @@ function OnboardingRoute({ children }: { children: ReactNode }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (hasHousehold) return <Navigate to="/recipes" replace />;
 
-  return <>{children}</>;
+  return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
 }
 
 function PublicRoute({ children }: { children: ReactNode }) {
@@ -59,7 +63,7 @@ function PublicRoute({ children }: { children: ReactNode }) {
   if (isLoading) return <LoadingScreen />;
   if (isAuthenticated) return <Navigate to="/recipes" replace />;
 
-  return <>{children}</>;
+  return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
 }
 
 function AppRoutes() {
@@ -95,11 +99,15 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <HouseholdProvider>
-            <AppRoutes />
-          </HouseholdProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            <AuthProvider>
+              <HouseholdProvider>
+                <AppRoutes />
+              </HouseholdProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   );

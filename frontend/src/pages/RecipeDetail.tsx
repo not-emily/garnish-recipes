@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getRecipe, deleteRecipe } from "@/api/recipes";
 import { copyRecipe } from "@/api/collections";
+import { useToast } from "@/components/ui/Toast";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
@@ -33,6 +34,7 @@ export function RecipeDetail() {
   const queryClient = useQueryClient();
   const { household } = useHousehold();
 
+  const { toast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
@@ -69,6 +71,7 @@ export function RecipeDetail() {
     mutationFn: () => deleteRecipe(apikey!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      toast("Recipe deleted");
       navigate("/recipes");
     },
   });
@@ -78,6 +81,7 @@ export function RecipeDetail() {
     onSuccess: () => {
       setCopied(true);
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      toast("Copied to your recipes");
       setTimeout(() => setCopied(false), 3000);
     },
   });
@@ -498,3 +502,5 @@ export function RecipeDetail() {
     </div>
   );
 }
+
+export default RecipeDetail;

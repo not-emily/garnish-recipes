@@ -30,12 +30,14 @@ import { AddRecipesModal } from "@/components/collections/AddRecipesModal";
 import { ShareModal } from "@/components/collections/ShareModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DropdownMenu, DropdownItem } from "@/components/ui/DropdownMenu";
+import { useToast } from "@/components/ui/Toast";
 import type { CollectionInput } from "@/types/collection";
 
 export function CollectionDetail() {
   const { apikey } = useParams<{ apikey: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -55,6 +57,7 @@ export function CollectionDetail() {
     mutationFn: () => deleteCollection(apikey!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
+      toast("Collection deleted");
       navigate("/collections");
     },
   });
@@ -80,6 +83,7 @@ export function CollectionDetail() {
     mutationFn: () => leaveCollection(apikey!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
+      toast("Left collection");
       navigate("/collections");
     },
   });
@@ -89,6 +93,7 @@ export function CollectionDetail() {
     onSuccess: (_res, recipeApikey) => {
       setCopiedId(recipeApikey);
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      toast("Copied to your recipes");
       setTimeout(() => setCopiedId(null), 2000);
     },
   });
@@ -393,3 +398,5 @@ export function CollectionDetail() {
     </div>
   );
 }
+
+export default CollectionDetail;

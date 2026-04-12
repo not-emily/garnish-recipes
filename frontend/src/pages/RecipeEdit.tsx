@@ -60,3 +60,5 @@ export function RecipeEdit() {
     </div>
   );
 }
+
+export default RecipeEdit;

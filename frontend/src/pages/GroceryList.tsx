@@ -17,6 +17,7 @@ import { addGroceryStore, renameGroceryStore, removeGroceryStore } from "@/api/g
 import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
+import { SwipeableGroceryItem } from "@/components/grocery/SwipeableGroceryItem";
 import { todayIso, addDays, formatMonthDay, formatWeekdayShort } from "@/lib/weekUtils";
 
 export function GroceryList() {
@@ -263,17 +264,23 @@ export function GroceryList() {
                 </h3>
                 <ul className="space-y-1">
                   {categoryItems.map((item) => (
-                    <GroceryItemRow
+                    <SwipeableGroceryItem
                       key={item.id}
-                      item={item}
-                      stores={stores}
-                      canEdit={canEdit}
-                      onCheck={() => checkItem.mutate(item.id)}
-                      onUpdate={(input) =>
-                        updateItem.mutate({ id: item.id, input })
-                      }
-                      onRemove={() => removeItem.mutate(item.id)}
-                    />
+                      enabled={canEdit}
+                      onSwipeCheck={() => checkItem.mutate(item.id)}
+                      onSwipeRemove={() => removeItem.mutate(item.id)}
+                    >
+                      <GroceryItemRow
+                        item={item}
+                        stores={stores}
+                        canEdit={canEdit}
+                        onCheck={() => checkItem.mutate(item.id)}
+                        onUpdate={(input) =>
+                          updateItem.mutate({ id: item.id, input })
+                        }
+                        onRemove={() => removeItem.mutate(item.id)}
+                      />
+                    </SwipeableGroceryItem>
                   ))}
                 </ul>
               </div>
@@ -443,20 +450,6 @@ function GroceryItemRow({
         <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
           {item.store}
         </span>
-      )}
-
-      {canEdit && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-          aria-label="Remove"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
       )}
 
       {editing && (
@@ -940,3 +933,5 @@ function ShoppingCartEmpty() {
     </svg>
   );
 }
+
+export default GroceryList;
