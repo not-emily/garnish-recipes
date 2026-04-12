@@ -6,7 +6,8 @@ class ApplicationController < ActionController::API
   # for authorization (avoids unsafe reflection via .constantize).
   POLICY_CLASSES = {
     "Recipe" => "RecipePolicy",
-    "MealPlan" => "MealPlanPolicy"
+    "MealPlan" => "MealPlanPolicy",
+    "GroceryList" => "GroceryListPolicy"
   }.freeze
 
   POLICY_SCOPE_CLASSES = {

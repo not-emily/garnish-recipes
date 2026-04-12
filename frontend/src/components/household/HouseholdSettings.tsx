@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { X, Plus } from "lucide-react";
 import { updateHousehold } from "@/api/households";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import type { ApiError } from "@/types";
@@ -16,6 +17,8 @@ export function HouseholdSettings() {
   const [leftoverExpiryDays, setLeftoverExpiryDays] = useState(
     String(household?.leftover_expiry_days ?? 3)
   );
+  const [stores, setStores] = useState<string[]>(household?.stores ?? []);
+  const [newStore, setNewStore] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +42,7 @@ export function HouseholdSettings() {
           | "dinner"
           | "ask",
         leftover_expiry_days: Number(leftoverExpiryDays),
+        stores,
       });
       setHousehold(res.data);
       setSaved(true);
@@ -139,6 +143,66 @@ export function HouseholdSettings() {
         <p className="mt-1 text-xs text-gray-500">
           Tray items disappear from view after this many days so the tray doesn't clutter up.
         </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Grocery stores
+        </label>
+        <p className="mt-0.5 text-xs text-gray-500">
+          Add stores to tag grocery items by where you buy them.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {stores.map((s) => (
+            <span
+              key={s}
+              className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+            >
+              {s}
+              <button
+                type="button"
+                onClick={() => setStores(stores.filter((x) => x !== s))}
+                className="rounded-full p-0.5 text-gray-400 hover:text-gray-600"
+                aria-label={`Remove ${s}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            type="text"
+            value={newStore}
+            onChange={(e) => setNewStore(e.target.value)}
+            placeholder="e.g. Costco, Trader Joe's"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const trimmed = newStore.trim();
+                if (trimmed && !stores.includes(trimmed)) {
+                  setStores([...stores, trimmed]);
+                  setNewStore("");
+                }
+              }
+            }}
+            className="block flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-garnish-500 focus:outline-none focus:ring-1 focus:ring-garnish-500"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const trimmed = newStore.trim();
+              if (trimmed && !stores.includes(trimmed)) {
+                setStores([...stores, trimmed]);
+                setNewStore("");
+              }
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add
+          </button>
+        </div>
       </div>
 
       <button

@@ -49,6 +49,19 @@ Rails.application.routes.draw do
       delete "meal_plans/:week_start/entries/:id",      to: "meal_plans#destroy_entry"
       post   "meal_plans/:week_start/entries/reorder",  to: "meal_plans#reorder_entries"
 
+      # Grocery list — single rolling list per household.
+      get    "grocery_list",                    to: "grocery_lists#show"
+      post   "grocery_list/generate",           to: "grocery_lists#generate"
+      post   "grocery_list/items",              to: "grocery_lists#add_item"
+      patch  "grocery_list/items/:id",          to: "grocery_lists#update_item"
+      patch  "grocery_list/items/:id/check",    to: "grocery_lists#check_item"
+      patch  "grocery_list/items/:id/uncheck",  to: "grocery_lists#uncheck_item"
+      delete "grocery_list/items/:id",          to: "grocery_lists#remove_item"
+      delete "grocery_list/checked",            to: "grocery_lists#clear_checked"
+      post   "grocery_list/stores",             to: "grocery_lists#add_store"
+      patch  "grocery_list/stores",             to: "grocery_lists#rename_store"
+      delete "grocery_list/stores",             to: "grocery_lists#remove_store"
+
       # Leftover tray — household-scoped surplus from cooked meals that
       # haven't been assigned to a slot yet. Items expire after
       # household.leftover_expiry_days.

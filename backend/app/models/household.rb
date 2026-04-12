@@ -4,6 +4,8 @@ class Household < ApplicationRecord
   has_many :recipes, dependent: :destroy
   has_many :meal_plans, dependent: :destroy
   has_many :leftover_tray_items, dependent: :destroy
+  has_many :grocery_lists, dependent: :destroy
+  has_many :ingredient_category_mappings, dependent: :destroy
 
   validates :name, presence: true
   validates :invite_code, presence: true, uniqueness: true

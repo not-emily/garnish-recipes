@@ -15,6 +15,7 @@ export interface Household {
   leftover_suggestion: "on" | "off" | "ask";
   leftover_default_slot: "breakfast" | "lunch" | "dinner" | "ask";
   leftover_expiry_days: number;
+  stores: string[];
   invite_code: string | null;
   my_role: "owner" | "admin" | "member";
   my_grocery_permission: "read" | "contribute" | "full";

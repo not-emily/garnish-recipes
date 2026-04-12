@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_11_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -133,6 +133,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_000000) do
     t.index ["scheduled_at"], name: "index_good_jobs_on_scheduled_at", where: "(finished_at IS NULL)"
   end
 
+  create_table "grocery_list_items", force: :cascade do |t|
+    t.bigint "added_by_id", null: false
+    t.string "category", default: "other", null: false
+    t.boolean "checked", default: false, null: false
+    t.datetime "created_at", null: false
+    t.bigint "grocery_list_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.decimal "quantity", precision: 10, scale: 2
+    t.jsonb "source_entries", default: [], null: false
+    t.string "source_type", default: "manual", null: false
+    t.string "store"
+    t.string "unit"
+    t.datetime "updated_at", null: false
+    t.index ["added_by_id"], name: "index_grocery_list_items_on_added_by_id"
+    t.index ["grocery_list_id", "checked"], name: "index_grocery_list_items_on_grocery_list_id_and_checked"
+    t.index ["grocery_list_id"], name: "index_grocery_list_items_on_grocery_list_id"
+  end
+
+  create_table "grocery_lists", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "excluded_items", default: [], null: false
+    t.date "generated_from"
+    t.date "generated_to"
+    t.bigint "household_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["household_id"], name: "index_grocery_lists_on_household_id", unique: true
+  end
+
   create_table "household_memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "grocery_permission", default: "contribute", null: false
@@ -154,8 +183,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_000000) do
     t.integer "leftover_expiry_days", default: 3, null: false
     t.string "leftover_suggestion", default: "ask", null: false
     t.string "name", null: false
+    t.string "stores", default: [], null: false, array: true
     t.datetime "updated_at", null: false
     t.index ["invite_code"], name: "index_households_on_invite_code", unique: true
+  end
+
+  create_table "ingredient_category_mappings", force: :cascade do |t|
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.bigint "household_id", null: false
+    t.string "ingredient_name", null: false
+    t.string "store"
+    t.datetime "updated_at", null: false
+    t.index ["household_id", "ingredient_name"], name: "idx_ingredient_mappings_on_hh_name", unique: true
+    t.index ["household_id"], name: "index_ingredient_category_mappings_on_household_id"
   end
 
   create_table "leftover_tray_items", force: :cascade do |t|
@@ -257,8 +298,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_000000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "grocery_list_items", "grocery_lists"
+  add_foreign_key "grocery_list_items", "users", column: "added_by_id"
+  add_foreign_key "grocery_lists", "households"
   add_foreign_key "household_memberships", "households"
   add_foreign_key "household_memberships", "users"
+  add_foreign_key "ingredient_category_mappings", "households"
   add_foreign_key "leftover_tray_items", "households"
   add_foreign_key "leftover_tray_items", "meal_plan_entries", column: "source_entry_id"
   add_foreign_key "meal_plan_entries", "meal_plan_entries", column: "leftover_of_id"

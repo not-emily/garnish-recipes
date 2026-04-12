@@ -127,7 +127,8 @@ module Api
 
       def update_params
         params.require(:household).permit(:name, :default_diners, :leftover_suggestion,
-                                          :leftover_default_slot, :leftover_expiry_days)
+                                          :leftover_default_slot, :leftover_expiry_days,
+                                          stores: [])
       end
 
       def serialize_household(household)
@@ -139,6 +140,7 @@ module Api
           leftover_suggestion: household.leftover_suggestion,
           leftover_default_slot: household.leftover_default_slot,
           leftover_expiry_days: household.leftover_expiry_days,
+          stores: household.stores,
           invite_code: membership&.can_manage_members? ? household.invite_code : nil,
           my_role: membership&.role,
           my_grocery_permission: membership&.grocery_permission,
