@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Plus, Download } from "lucide-react";
 import { RecipeBrowser } from "@/components/recipes/RecipeBrowser";
 import { ImportModal } from "@/components/recipes/ImportModal";
+import { RecipePageTabs } from "@/components/recipes/RecipePageTabs";
 import { useHousehold } from "@/contexts/HouseholdContext";
 
 export function Recipes() {
@@ -35,6 +36,8 @@ export function Recipes() {
           </div>
         )}
       </div>
+
+      <RecipePageTabs active="browse" />
 
       <RecipeBrowser />
 

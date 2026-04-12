@@ -8,6 +8,7 @@ import {
   type LlmProvider,
 } from "@/api/userSettings";
 import type { ApiError } from "@/types";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const PROVIDER_OPTIONS: { value: LlmProvider; label: string; hint: string }[] = [
   {
@@ -44,6 +45,7 @@ export function ApiKeyForm() {
     ok: boolean;
     message: string;
   } | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Hydrate the form with existing settings on first load.
   useEffect(() => {
@@ -127,7 +129,7 @@ export function ApiKeyForm() {
   }
 
   function handleClear() {
-    if (!confirm("Remove your saved LLM credentials? Recipe imports will fall back to free extractors only.")) return;
+    setConfirmClear(false);
     saveMutation.mutate({
       llm_provider: null,
       llm_model: null,
@@ -297,7 +299,7 @@ export function ApiKeyForm() {
         {hasCredentials && (
           <button
             type="button"
-            onClick={handleClear}
+            onClick={() => setConfirmClear(true)}
             disabled={saveMutation.isPending}
             className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
           >
@@ -306,6 +308,16 @@ export function ApiKeyForm() {
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Remove LLM credentials?"
+        message="Recipe imports will fall back to free extractors only."
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleClear}
+        onCancel={() => setConfirmClear(false)}
+      />
     </form>
   );
 }

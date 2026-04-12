@@ -14,6 +14,8 @@ import { RecipeNew } from "@/pages/RecipeNew";
 import { RecipeEdit } from "@/pages/RecipeEdit";
 import { MealPlan } from "@/pages/MealPlan";
 import { GroceryList } from "@/pages/GroceryList";
+import { Collections } from "@/pages/Collections";
+import { CollectionDetail } from "@/pages/CollectionDetail";
 import { Settings } from "@/pages/Settings";
 import type { ReactNode } from "react";
 
@@ -76,6 +78,8 @@ function AppRoutes() {
         <Route path="/recipes/new" element={<RecipeNew />} />
         <Route path="/recipes/:apikey" element={<RecipeDetail />} />
         <Route path="/recipes/:apikey/edit" element={<RecipeEdit />} />
+        <Route path="/collections" element={<Collections />} />
+        <Route path="/collections/:apikey" element={<CollectionDetail />} />
         <Route path="/meal-plan" element={<MealPlan />} />
         <Route path="/grocery-list" element={<GroceryList />} />
         <Route path="/settings" element={<Settings />} />

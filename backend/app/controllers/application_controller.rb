@@ -7,12 +7,14 @@ class ApplicationController < ActionController::API
   POLICY_CLASSES = {
     "Recipe" => "RecipePolicy",
     "MealPlan" => "MealPlanPolicy",
-    "GroceryList" => "GroceryListPolicy"
+    "GroceryList" => "GroceryListPolicy",
+    "RecipeCollection" => "CollectionPolicy"
   }.freeze
 
   POLICY_SCOPE_CLASSES = {
     "Recipe" => "RecipePolicy::Scope",
-    "MealPlan" => "MealPlanPolicy::Scope"
+    "MealPlan" => "MealPlanPolicy::Scope",
+    "RecipeCollection" => "CollectionPolicy::Scope"
   }.freeze
 
   private

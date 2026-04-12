@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,6 +17,7 @@ import { getRecipe, deleteRecipe } from "@/api/recipes";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
@@ -23,6 +25,8 @@ export function RecipeDetail() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { household } = useHousehold();
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
@@ -51,8 +55,7 @@ export function RecipeDetail() {
   });
 
   function handleDelete() {
-    if (!confirm("Delete this recipe? This can't be undone.")) return;
-    deleteMutation.mutate();
+    setConfirmDelete(true);
   }
 
   function handleExport() {
@@ -346,6 +349,17 @@ export function RecipeDetail() {
       <p className="mt-8 text-xs text-gray-400">
         Added by {recipe.contributed_by.name}
       </p>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete recipe?"
+        message="This can't be undone. The recipe will be permanently deleted."
+        confirmLabel="Delete"
+        variant="danger"
+        isSubmitting={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

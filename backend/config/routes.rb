@@ -62,6 +62,15 @@ Rails.application.routes.draw do
       patch  "grocery_list/stores",             to: "grocery_lists#rename_store"
       delete "grocery_list/stores",             to: "grocery_lists#remove_store"
 
+      # Collections
+      get    "collections",                                          to: "collections#index"
+      post   "collections",                                          to: "collections#create"
+      get    "collections/:apikey",                                  to: "collections#show"
+      patch  "collections/:apikey",                                  to: "collections#update"
+      delete "collections/:apikey",                                  to: "collections#destroy"
+      post   "collections/:collection_apikey/recipes",               to: "collection_recipes#create"
+      delete "collections/:collection_apikey/recipes/:apikey",       to: "collection_recipes#destroy"
+
       # Leftover tray — household-scoped surplus from cooked meals that
       # haven't been assigned to a slot yet. Items expire after
       # household.leftover_expiry_days.

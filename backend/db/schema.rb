@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "collection_recipes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position"
+    t.bigint "recipe_collection_id", null: false
+    t.bigint "recipe_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recipe_collection_id", "recipe_id"], name: "idx_collection_recipes_unique", unique: true
+    t.index ["recipe_collection_id"], name: "index_collection_recipes_on_recipe_collection_id"
+    t.index ["recipe_id"], name: "index_collection_recipes_on_recipe_id"
   end
 
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -240,6 +251,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
     t.index ["household_id"], name: "index_meal_plans_on_household_id"
   end
 
+  create_table "recipe_collections", force: :cascade do |t|
+    t.string "apikey", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "household_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.string "visibility", default: "private", null: false
+    t.index ["apikey"], name: "index_recipe_collections_on_apikey", unique: true
+    t.index ["household_id", "user_id"], name: "index_recipe_collections_on_household_id_and_user_id"
+    t.index ["household_id"], name: "index_recipe_collections_on_household_id"
+    t.index ["user_id"], name: "index_recipe_collections_on_user_id"
+  end
+
   create_table "recipes", force: :cascade do |t|
     t.string "apikey", null: false
     t.string "category"
@@ -298,6 +324,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "collection_recipes", "recipe_collections"
+  add_foreign_key "collection_recipes", "recipes"
   add_foreign_key "grocery_list_items", "grocery_lists"
   add_foreign_key "grocery_list_items", "users", column: "added_by_id"
   add_foreign_key "grocery_lists", "households"
@@ -310,6 +338,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_300000) do
   add_foreign_key "meal_plan_entries", "meal_plans"
   add_foreign_key "meal_plan_entries", "recipes"
   add_foreign_key "meal_plans", "households"
+  add_foreign_key "recipe_collections", "households"
+  add_foreign_key "recipe_collections", "users"
   add_foreign_key "recipes", "households"
   add_foreign_key "recipes", "users", column: "contributed_by_id"
 end
