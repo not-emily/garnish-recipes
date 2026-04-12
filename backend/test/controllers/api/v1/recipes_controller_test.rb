@@ -155,6 +155,34 @@ module Api
         assert_response :not_found
       end
 
+      # --- Collections membership ---
+
+      test "collections returns user's collections with has_recipe flag" do
+        col1 = @household.recipe_collections.create!(user: @owner, name: "Favorites")
+        col2 = @household.recipe_collections.create!(user: @owner, name: "Weeknight")
+        col1.collection_recipes.create!(recipe: @recipe)
+
+        get "/api/v1/recipes/#{@recipe.apikey}/collections", headers: auth_headers(@owner), as: :json
+        assert_response :ok
+        body = JSON.parse(response.body)
+        assert_equal 2, body["data"].size
+
+        fav = body["data"].find { |c| c["name"] == "Favorites" }
+        wkn = body["data"].find { |c| c["name"] == "Weeknight" }
+        assert_equal true, fav["has_recipe"]
+        assert_equal false, wkn["has_recipe"]
+      end
+
+      test "collections only returns current user's collections" do
+        @household.recipe_collections.create!(user: @member, name: "Member Favs")
+        @household.recipe_collections.create!(user: @owner, name: "Owner Favs")
+
+        get "/api/v1/recipes/#{@recipe.apikey}/collections", headers: auth_headers(@owner), as: :json
+        body = JSON.parse(response.body)
+        assert_equal 1, body["data"].size
+        assert_equal "Owner Favs", body["data"].first["name"]
+      end
+
       # --- Create ---
 
       test "owner can create a recipe" do

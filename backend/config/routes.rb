@@ -30,6 +30,7 @@ Rails.application.routes.draw do
       get "recipes/:apikey", to: "recipes#show"
       patch "recipes/:apikey", to: "recipes#update"
       delete "recipes/:apikey", to: "recipes#destroy"
+      get    "recipes/:apikey/collections", to: "recipes#collections"
 
       # Recipe imports
       post "imports", to: "imports#create"

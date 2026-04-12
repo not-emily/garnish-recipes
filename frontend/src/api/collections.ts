@@ -29,6 +29,18 @@ export function deleteCollection(apikey: string) {
   return api<void>(`/collections/${apikey}`, { method: "DELETE" });
 }
 
+export interface RecipeCollectionMembership {
+  id: string;
+  name: string;
+  has_recipe: boolean;
+}
+
+export function getRecipeCollections(recipeApikey: string) {
+  return api<ApiResponse<RecipeCollectionMembership[]>>(
+    `/recipes/${recipeApikey}/collections`
+  );
+}
+
 export function addRecipeToCollection(collectionApikey: string, recipeApikey: string) {
   return api<ApiResponse<{ collection_id: string; recipe_id: string }>>(
     `/collections/${collectionApikey}/recipes`,

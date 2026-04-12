@@ -12,12 +12,14 @@ import {
   ExternalLink,
   Timer,
   AlertCircle,
+  FolderPlus,
 } from "lucide-react";
 import { getRecipe, deleteRecipe } from "@/api/recipes";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AddToCollectionModal } from "@/components/collections/AddToCollectionModal";
 
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
@@ -27,6 +29,7 @@ export function RecipeDetail() {
   const { household } = useHousehold();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
@@ -129,33 +132,43 @@ export function RecipeDetail() {
           {backLink.label}
         </Link>
 
-        {canEdit && (
-          <div className="flex items-center gap-1">
-            <Link
-              to={`/recipes/${recipe.id}/edit`}
-              className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-              aria-label="Edit recipe"
-            >
-              <Pencil className="h-4 w-4" />
-            </Link>
-            <button
-              type="button"
-              onClick={handleExport}
-              className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-              aria-label="Export recipe"
-            >
-              <Download className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-              aria-label="Delete recipe"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setCollectionModalOpen(true)}
+            className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+            aria-label="Add to collection"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </button>
+          {canEdit && (
+            <>
+              <Link
+                to={`/recipes/${recipe.id}/edit`}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+                aria-label="Edit recipe"
+              >
+                <Pencil className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+                aria-label="Export recipe"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                aria-label="Delete recipe"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Needs-review banner — shown for recipes that were imported but
@@ -349,6 +362,12 @@ export function RecipeDetail() {
       <p className="mt-8 text-xs text-gray-400">
         Added by {recipe.contributed_by.name}
       </p>
+
+      <AddToCollectionModal
+        open={collectionModalOpen}
+        onClose={() => setCollectionModalOpen(false)}
+        recipeApikey={recipe.id}
+      />
 
       <ConfirmDialog
         open={confirmDelete}

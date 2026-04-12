@@ -4,7 +4,7 @@ module Api
       before_action :authenticate!
       include HouseholdScoped
 
-      before_action :load_recipe, only: [:show, :update, :destroy]
+      before_action :load_recipe, only: [:show, :update, :destroy, :collections]
 
       # GET /api/v1/recipes
       def index
@@ -70,6 +70,31 @@ module Api
         else
           render_validation_errors(@recipe)
         end
+      end
+
+      # GET /api/v1/recipes/:apikey/collections
+      # Returns which of the current user's collections contain this recipe.
+      def collections
+        return unless authorize!(@recipe, :show?)
+
+        user_collections = current_user.recipe_collections
+                                       .where(household: Current.household)
+                                       .order(:name)
+        member_ids = user_collections
+                       .joins(:collection_recipes)
+                       .where(collection_recipes: { recipe_id: @recipe.id })
+                       .pluck(:id)
+                       .to_set
+
+        render json: {
+          data: user_collections.map { |c|
+            {
+              id: c.apikey,
+              name: c.name,
+              has_recipe: member_ids.include?(c.id)
+            }
+          }
+        }
       end
 
       # DELETE /api/v1/recipes/:apikey
