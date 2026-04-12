@@ -17,9 +17,15 @@ export interface MealPlanEntry {
   diners_override: number | null;
   include_in_grocery: boolean;
   // True when the entry contributes ingredients to the grocery list — i.e.,
-  // it's backed by a full recipe or quick meal. Events and notes are false.
-  // Derived server-side so the frontend doesn't duplicate the logic.
+  // it's backed by a full recipe or quick meal. Events, notes, and leftover
+  // entries are false. Derived server-side so the frontend doesn't duplicate
+  // the logic.
   grocery_relevant: boolean;
+  is_leftover: boolean;
+  // Internal id of the source entry this leftover came from. Used to visually
+  // link a leftover back to the original meal in the UI.
+  leftover_of_id: number | null;
+  leftover_servings: number | null;
   recipe?: {
     id: string; // public apikey
     title: string;
@@ -27,6 +33,7 @@ export interface MealPlanEntry {
     image_url: string | null;
     servings: number | null;
     total_time_minutes: number | null;
+    has_notes: boolean;
   };
 }
 
@@ -41,6 +48,23 @@ export interface CreateEntryInput {
   date: string;
   meal_slot: MealSlot;
   title?: string; // notes only
+  // Optional linked leftover entries — each produces a second MealPlanEntry
+  // with is_leftover: true pointing at the one being created here. Only
+  // valid with a recipe-backed entry.
+  leftovers?: { date: string; meal_slot: MealSlot }[];
+  // When true, the backend creates LeftoverTrayItem rows for any cooked
+  // surplus (full meals the user didn't schedule + partial remainder).
+  // Frontend sets this based on the LeftoverPrompt toggle and household
+  // settings.
+  track_remaining?: boolean;
+}
+
+export interface CreateEntryResponse {
+  data: MealPlanEntry;
+  leftovers?: MealPlanEntry[];
+  // Tray items created for surplus when track_remaining is true. Consumed
+  // by useMealPlan to invalidate the tray cache after the mutation.
+  tray_items?: unknown[];
 }
 
 export interface UpdateEntryInput {

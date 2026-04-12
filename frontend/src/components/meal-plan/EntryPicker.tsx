@@ -7,31 +7,83 @@ import type { RecipeSummary, RecipeCategory, RecipeType } from "@/types/recipe";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import type { ApiError } from "@/types";
 import { formatWeekdayLong, formatMonthDay } from "@/lib/weekUtils";
+import { useHousehold } from "@/contexts/HouseholdContext";
+import { calculateLeftovers } from "@/hooks/useLeftoverCalculation";
+import { LeftoverPrompt } from "./LeftoverPrompt";
 
 type Tab = "recipe" | "event" | "note";
+
+export interface SubmitRecipeOptions {
+  leftovers?: { date: string; meal_slot: MealSlot }[];
+  trackRemaining?: boolean;
+}
 
 interface EntryPickerProps {
   open: boolean;
   target: { date: string; slot: MealSlot } | null;
   onClose: () => void;
-  onSelectRecipe: (recipeId: string) => void;
+  onSubmitRecipe: (recipeId: string, opts?: SubmitRecipeOptions) => void;
   onCreateNote: (title: string) => void;
+  isSubmitting?: boolean;
 }
 
 export function EntryPicker({
   open,
   target,
   onClose,
-  onSelectRecipe,
+  onSubmitRecipe,
   onCreateNote,
+  isSubmitting = false,
 }: EntryPickerProps) {
   const [tab, setTab] = useState<Tab>("recipe");
+  const { household } = useHousehold();
 
-  // Reset tab to default whenever the picker is re-opened, so it doesn't
+  // When a user picks a recipe that yields multiple meals, we swap to the
+  // LeftoverPrompt instead of submitting immediately. This lets them plan
+  // the leftover slots inline without opening a second modal.
+  const [pendingLeftover, setPendingLeftover] = useState<RecipeSummary | null>(null);
+
+  // Reset tab + pending state whenever the picker is re-opened, so it doesn't
   // surprise the user with whatever they selected last time.
   useEffect(() => {
-    if (open) setTab("recipe");
+    if (open) {
+      setTab("recipe");
+      setPendingLeftover(null);
+    }
   }, [open]);
+
+  // Called by the recipe tab when the user clicks a recipe. If the recipe
+  // has multiple meals worth of leftovers, we route into the LeftoverPrompt.
+  // Otherwise we submit immediately — with track_remaining driven by the
+  // household's leftover_suggestion (so partial remainders still land in
+  // the tray when the household opts in globally).
+  function handlePickRecipe(recipe: RecipeSummary) {
+    if (household && household.leftover_suggestion !== "off") {
+      const calc = calculateLeftovers({
+        servings: recipe.servings,
+        default_diners: household.default_diners,
+      });
+      if (calc.has_full_leftover_meals) {
+        setPendingLeftover(recipe);
+        return;
+      }
+      // No full leftovers but a partial remainder may still exist — the
+      // backend computes the final count; we just opt in to tracking.
+      if (calc.has_partial_leftovers) {
+        onSubmitRecipe(recipe.id, { trackRemaining: true });
+        return;
+      }
+    }
+    onSubmitRecipe(recipe.id);
+  }
+
+  function handleLeftoverConfirm(
+    leftovers: { date: string; meal_slot: MealSlot }[],
+    trackRemaining: boolean
+  ) {
+    if (!pendingLeftover) return;
+    onSubmitRecipe(pendingLeftover.id, { leftovers, trackRemaining });
+  }
 
   // Esc-to-close
   useEffect(() => {
@@ -71,17 +123,32 @@ export function EntryPicker({
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 border-b border-gray-100 p-3">
-          <TabButton active={tab === "recipe"} onClick={() => setTab("recipe")} icon={Book} label="Recipe" />
-          <TabButton active={tab === "event"} onClick={() => setTab("event")} icon={Calendar} label="Event" />
-          <TabButton active={tab === "note"} onClick={() => setTab("note")} icon={StickyNote} label="Note" />
-        </div>
+        {pendingLeftover && household ? (
+          <div className="flex-1 overflow-y-auto p-5">
+            <LeftoverPrompt
+              recipe={pendingLeftover}
+              target={target}
+              household={household}
+              onConfirm={handleLeftoverConfirm}
+              onBack={() => setPendingLeftover(null)}
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-1 border-b border-gray-100 p-3">
+              <TabButton active={tab === "recipe"} onClick={() => setTab("recipe")} icon={Book} label="Recipe" />
+              <TabButton active={tab === "event"} onClick={() => setTab("event")} icon={Calendar} label="Event" />
+              <TabButton active={tab === "note"} onClick={() => setTab("note")} icon={StickyNote} label="Note" />
+            </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          {tab === "recipe" && <RecipeTab onSelect={onSelectRecipe} />}
-          {tab === "event" && <EventTab onCreated={onSelectRecipe} />}
-          {tab === "note" && <NoteTab onSubmit={onCreateNote} />}
-        </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "recipe" && <RecipeTab onPick={handlePickRecipe} onCreated={(id) => onSubmitRecipe(id)} />}
+              {tab === "event" && <EventTab onCreated={(id) => onSubmitRecipe(id)} />}
+              {tab === "note" && <NoteTab onSubmit={onCreateNote} isSubmitting={isSubmitting} />}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -116,7 +183,13 @@ function TabButton({
 
 // --- Tab: Recipe (full recipes + quick meals, filtered via pill) --------
 
-function RecipeTab({ onSelect }: { onSelect: (recipeId: string) => void }) {
+function RecipeTab({
+  onPick,
+  onCreated,
+}: {
+  onPick: (recipe: RecipeSummary) => void;
+  onCreated: (recipeId: string) => void;
+}) {
   // Filter pill — "all" means any recipe, "full" means just full recipes,
   // "quick_meal" means just quick meals. Matches the main RecipeBrowser
   // pattern so the meal-plan experience feels consistent with browsing.
@@ -151,7 +224,7 @@ function RecipeTab({ onSelect }: { onSelect: (recipeId: string) => void }) {
     return (
       <QuickMealCreateForm
         onCancel={() => setCreating(false)}
-        onCreated={onSelect}
+        onCreated={onCreated}
       />
     );
   }
@@ -209,7 +282,7 @@ function RecipeTab({ onSelect }: { onSelect: (recipeId: string) => void }) {
             <li key={r.id}>
               <button
                 type="button"
-                onClick={() => onSelect(r.id)}
+                onClick={() => onPick(r)}
                 className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-garnish-50"
               >
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-gradient-to-br from-garnish-50 to-garnish-100">
@@ -553,13 +626,19 @@ function EventCreateForm({
 
 // --- Tab: Note (not a recipe — just a freeform note on the entry) -------
 
-function NoteTab({ onSubmit }: { onSubmit: (title: string) => void }) {
+function NoteTab({
+  onSubmit,
+  isSubmitting = false,
+}: {
+  onSubmit: (title: string) => void;
+  isSubmitting?: boolean;
+}) {
   const [title, setTitle] = useState("");
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (title.trim()) onSubmit(title.trim());
+        if (title.trim() && !isSubmitting) onSubmit(title.trim());
       }}
       className="space-y-3"
     >
@@ -579,7 +658,7 @@ function NoteTab({ onSubmit }: { onSubmit: (title: string) => void }) {
           Notes are just reminders — they don't go into your recipe library or grocery list.
         </p>
       </div>
-      <SubmitButton pending={false} disabled={!title.trim()}>
+      <SubmitButton pending={isSubmitting} disabled={!title.trim()}>
         Add note
       </SubmitButton>
     </form>

@@ -4,6 +4,7 @@ import type {
   MealPlan,
   MealPlanEntry,
   CreateEntryInput,
+  CreateEntryResponse,
   UpdateEntryInput,
 } from "@/types/mealPlan";
 
@@ -14,9 +15,10 @@ export function getMealPlan(weekStart: string) {
 }
 
 export function createMealPlanEntry(weekStart: string, input: CreateEntryInput) {
-  return api<ApiResponse<MealPlanEntry>>(`/meal_plans/${weekStart}/entries`, {
+  const { leftovers, track_remaining, ...entry } = input;
+  return api<CreateEntryResponse>(`/meal_plans/${weekStart}/entries`, {
     method: "POST",
-    body: JSON.stringify({ entry: input }),
+    body: JSON.stringify({ entry, leftovers, track_remaining }),
   });
 }
 
@@ -34,8 +36,13 @@ export function updateMealPlanEntry(
   );
 }
 
-export function deleteMealPlanEntry(weekStart: string, entryId: number) {
-  return api<void>(`/meal_plans/${weekStart}/entries/${entryId}`, {
+export function deleteMealPlanEntry(
+  weekStart: string,
+  entryId: number,
+  opts?: { cascade?: boolean }
+) {
+  const qs = opts?.cascade ? "?cascade=true" : "";
+  return api<void>(`/meal_plans/${weekStart}/entries/${entryId}${qs}`, {
     method: "DELETE",
   });
 }

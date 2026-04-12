@@ -3,12 +3,14 @@ class Household < ApplicationRecord
   has_many :members, through: :household_memberships, source: :user
   has_many :recipes, dependent: :destroy
   has_many :meal_plans, dependent: :destroy
+  has_many :leftover_tray_items, dependent: :destroy
 
   validates :name, presence: true
   validates :invite_code, presence: true, uniqueness: true
   validates :default_diners, numericality: { greater_than: 0 }
   validates :leftover_suggestion, inclusion: { in: %w[on off ask] }
   validates :leftover_default_slot, inclusion: { in: %w[breakfast lunch dinner ask] }
+  validates :leftover_expiry_days, numericality: { greater_than: 0, less_than_or_equal_to: 14 }
 
   before_validation :generate_invite_code, on: :create
 

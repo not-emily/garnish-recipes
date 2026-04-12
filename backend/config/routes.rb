@@ -48,6 +48,13 @@ Rails.application.routes.draw do
       patch  "meal_plans/:week_start/entries/:id",      to: "meal_plans#update_entry"
       delete "meal_plans/:week_start/entries/:id",      to: "meal_plans#destroy_entry"
       post   "meal_plans/:week_start/entries/reorder",  to: "meal_plans#reorder_entries"
+
+      # Leftover tray — household-scoped surplus from cooked meals that
+      # haven't been assigned to a slot yet. Items expire after
+      # household.leftover_expiry_days.
+      get    "leftover_tray",              to: "leftovers#index"
+      delete "leftover_tray/:id",          to: "leftovers#destroy"
+      post   "leftover_tray/:id/schedule", to: "leftovers#schedule"
     end
   end
 end

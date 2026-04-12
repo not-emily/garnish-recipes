@@ -221,6 +221,180 @@ module Api
         assert_response :unprocessable_entity
       end
 
+      # --- create_entry with leftovers ---
+
+      test "create_entry with leftovers creates linked entries in one transaction" do
+        assert_difference -> { MealPlanEntry.count }, 3 do
+          post "/api/v1/meal_plans/#{@monday}/entries",
+               headers: auth_headers(@owner),
+               params: {
+                 entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" },
+                 leftovers: [
+                   { date: (@monday + 1).to_s, meal_slot: "lunch" },
+                   { date: (@monday + 2).to_s, meal_slot: "lunch" }
+                 ]
+               }, as: :json
+        end
+        assert_response :created
+        body = JSON.parse(response.body)
+        assert_equal false, body["data"]["is_leftover"]
+        assert_equal 2, body["leftovers"].length
+
+        original_id = body["data"]["id"]
+        body["leftovers"].each do |lo|
+          assert_equal true, lo["is_leftover"]
+          assert_equal original_id, lo["leftover_of_id"]
+          assert_equal false, lo["include_in_grocery"]
+          assert_equal false, lo["grocery_relevant"]
+        end
+      end
+
+      test "create_entry with leftovers rejects a note (no recipe)" do
+        assert_no_difference -> { MealPlanEntry.count } do
+          post "/api/v1/meal_plans/#{@monday}/entries",
+               headers: auth_headers(@owner),
+               params: {
+                 entry: { date: @monday.to_s, meal_slot: "dinner", title: "Takeout" },
+                 leftovers: [ { date: (@monday + 1).to_s, meal_slot: "lunch" } ]
+               }, as: :json
+        end
+        assert_response :unprocessable_entity
+      end
+
+      test "create_entry rolls back all leftovers if one is invalid" do
+        assert_no_difference -> { MealPlanEntry.count } do
+          post "/api/v1/meal_plans/#{@monday}/entries",
+               headers: auth_headers(@owner),
+               params: {
+                 entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" },
+                 leftovers: [
+                   { date: (@monday + 1).to_s, meal_slot: "lunch" },
+                   { date: (@monday + 2).to_s, meal_slot: "midnight" }  # invalid
+                 ]
+               }, as: :json
+        end
+        assert_response :unprocessable_entity
+      end
+
+      test "create_entry broadcasts entry_created for original and each leftover" do
+        post "/api/v1/meal_plans/#{@monday}/entries",
+             headers: auth_headers(@owner),
+             params: {
+               entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" },
+               leftovers: [
+                 { date: (@monday + 1).to_s, meal_slot: "lunch" },
+                 { date: (@monday + 2).to_s, meal_slot: "lunch" }
+               ]
+             }, as: :json
+        assert_response :created
+        # Three entries saved in total: one original + two leftovers.
+        plan = MealPlan.find_by!(household: @household, week_start: @monday)
+        assert_equal 3, plan.entries.count
+        assert_equal 2, plan.entries.where(is_leftover: true).count
+      end
+
+      # --- create_entry with track_remaining (tray tracking) ---
+
+      test "create_entry with track_remaining creates tray items for unscheduled surplus" do
+        # 6 servings / 2 diners = 3 meals total → 1 original + 1 scheduled + 1 unscheduled tray
+        @recipe.update!(servings: 6)
+        @household.update!(default_diners: 2)
+
+        assert_difference -> { LeftoverTrayItem.count }, 1 do
+          post "/api/v1/meal_plans/#{@monday}/entries",
+               headers: auth_headers(@owner),
+               params: {
+                 entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" },
+                 leftovers: [ { date: (@monday + 1).to_s, meal_slot: "lunch" } ],
+                 track_remaining: true
+               }, as: :json
+        end
+        assert_response :created
+        body = JSON.parse(response.body)
+        assert_equal 1, body["tray_items"].length
+        assert_equal 2, body["tray_items"][0]["servings"]  # one full leftover meal worth
+      end
+
+      test "create_entry with track_remaining adds a partial tray item for remainder" do
+        # 5 servings / 2 diners = 2 meals + 1 extra → 1 original + 1 partial tray
+        @recipe.update!(servings: 5)
+        @household.update!(default_diners: 2)
+
+        post "/api/v1/meal_plans/#{@monday}/entries",
+             headers: auth_headers(@owner),
+             params: {
+               entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" },
+               leftovers: [ { date: (@monday + 1).to_s, meal_slot: "lunch" } ],
+               track_remaining: true
+             }, as: :json
+        assert_response :created
+        body = JSON.parse(response.body)
+        # 1 partial (1 serving). Full leftover was scheduled.
+        assert_equal 1, body["tray_items"].length
+        assert_equal 1, body["tray_items"][0]["servings"]
+      end
+
+      test "create_entry without track_remaining does not create tray items" do
+        @recipe.update!(servings: 6)
+        @household.update!(default_diners: 2)
+
+        assert_no_difference -> { LeftoverTrayItem.count } do
+          post "/api/v1/meal_plans/#{@monday}/entries",
+               headers: auth_headers(@owner),
+               params: {
+                 entry: { recipe_id: @recipe.apikey, date: @monday.to_s, meal_slot: "dinner" }
+               }, as: :json
+        end
+      end
+
+      # --- destroy_entry cascade ---
+
+      test "destroy_entry returns 409 when linked leftovers exist and cascade is not set" do
+        plan = MealPlan.for_week!(household: @household, week_start: @monday)
+        original = plan.entries.create!(recipe: @recipe, date: @monday, meal_slot: "dinner")
+        plan.entries.create!(
+          recipe: @recipe, date: @monday + 1, meal_slot: "lunch",
+          is_leftover: true, leftover_of_id: original.id
+        )
+
+        delete "/api/v1/meal_plans/#{@monday}/entries/#{original.id}",
+               headers: auth_headers(@owner)
+        assert_response :conflict
+        body = JSON.parse(response.body)
+        assert_equal "has_dependents", body["error"]["code"]
+        assert_equal 1, body["error"]["details"]["linked_leftover_count"]
+        assert_equal 0, body["error"]["details"]["tray_item_count"]
+      end
+
+      test "destroy_entry with cascade=true removes source, linked leftovers, and tray items" do
+        plan = MealPlan.for_week!(household: @household, week_start: @monday)
+        original = plan.entries.create!(recipe: @recipe, date: @monday, meal_slot: "dinner")
+        linked = plan.entries.create!(
+          recipe: @recipe, date: @monday + 1, meal_slot: "lunch",
+          is_leftover: true, leftover_of_id: original.id
+        )
+        tray = @household.leftover_tray_items.create!(source_entry: original, servings: 2)
+
+        assert_difference -> { MealPlanEntry.count }, -2 do
+          assert_difference -> { LeftoverTrayItem.count }, -1 do
+            delete "/api/v1/meal_plans/#{@monday}/entries/#{original.id}?cascade=true",
+                   headers: auth_headers(@owner)
+          end
+        end
+        assert_response :no_content
+        assert_not MealPlanEntry.exists?(original.id)
+        assert_not MealPlanEntry.exists?(linked.id)
+        assert_not LeftoverTrayItem.exists?(tray.id)
+      end
+
+      test "destroy_entry without dependents still works unchanged" do
+        plan = MealPlan.for_week!(household: @household, week_start: @monday)
+        entry = plan.entries.create!(recipe: @recipe, date: @monday, meal_slot: "dinner")
+        delete "/api/v1/meal_plans/#{@monday}/entries/#{entry.id}",
+               headers: auth_headers(@owner)
+        assert_response :no_content
+      end
+
       # --- update_entry ---
 
       test "update_entry applies servings_override and date/slot moves" do

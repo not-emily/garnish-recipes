@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Clock, Users, Snowflake, Calendar, StickyNote, MoreVertical } from "lucide-react";
+import { Clock, Snowflake, Calendar, StickyNote, MoreVertical, Utensils } from "lucide-react";
 import type { MealPlanEntry } from "@/types/mealPlan";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -41,8 +41,18 @@ const KIND_STYLE: Record<
   },
 };
 
+// Leftovers get their own muted style regardless of the underlying kind —
+// they're pre-cooked food, not a planned recipe to shop for, and should
+// read as a lightweight annotation on the week rather than a new meal.
+const LEFTOVER_STYLE = {
+  icon: Utensils,
+  ring: "ring-gray-200",
+  bg: "bg-gray-50",
+  text: "text-gray-600",
+} as const;
+
 export function MealEntry({ entry, onOptionsClick }: MealEntryProps) {
-  const style = KIND_STYLE[entry.kind];
+  const style = entry.is_leftover ? LEFTOVER_STYLE : KIND_STYLE[entry.kind];
   const Icon = style.icon;
 
   // Wide + hover-capable = desktop. Anywhere else (phones, tablets,
@@ -53,8 +63,6 @@ export function MealEntry({ entry, onOptionsClick }: MealEntryProps) {
   // (hover: hover)` media queries.
   const isDesktopHover = useMediaQuery("(min-width: 1024px) and (hover: hover)");
 
-  const servings = entry.servings_override ?? entry.recipe?.servings ?? null;
-
   // Recipe-backed entries link to the recipe detail page. Notes don't link
   // anywhere; tapping the options button is the only action.
   const body = (
@@ -63,23 +71,21 @@ export function MealEntry({ entry, onOptionsClick }: MealEntryProps) {
     >
       <Icon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${style.text}`} />
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-xs font-medium ${style.text}`}>
+        <p className={`truncate text-xs font-medium ${style.text} ${entry.is_leftover ? "italic" : ""}`}>
           {entry.title}
+          {entry.is_leftover && <span className="ml-1 font-normal opacity-75">(leftovers)</span>}
         </p>
-        {(servings || entry.recipe?.total_time_minutes) && (
+        {entry.recipe?.total_time_minutes && (
           <p className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-500">
-            {entry.recipe?.total_time_minutes && (
-              <span className="flex items-center gap-0.5">
-                <Clock className="h-2.5 w-2.5" />
-                {entry.recipe.total_time_minutes}m
-              </span>
-            )}
-            {servings && (
-              <span className="flex items-center gap-0.5">
-                <Users className="h-2.5 w-2.5" />
-                {servings}
-              </span>
-            )}
+            <span className="flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" />
+              {entry.recipe.total_time_minutes}m
+            </span>
+          </p>
+        )}
+        {entry.kind === "event" && entry.recipe?.has_notes && (
+          <p className="mt-0.5 flex items-center text-[10px] text-purple-400">
+            <StickyNote className="h-2.5 w-2.5" />
           </p>
         )}
       </div>

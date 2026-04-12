@@ -84,7 +84,6 @@ export function RecipeForm({
         .filter(Boolean);
       input.prep_time_minutes = prepTime ? Number(prepTime) : null;
       input.cook_time_minutes = cookTime ? Number(cookTime) : null;
-      input.image_url = null;
     }
 
     if (isFull || isQuickMeal) {

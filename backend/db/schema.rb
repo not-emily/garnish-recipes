@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_08_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_11_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -151,10 +151,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_08_000002) do
     t.integer "default_diners", default: 2, null: false
     t.string "invite_code", null: false
     t.string "leftover_default_slot", default: "lunch", null: false
+    t.integer "leftover_expiry_days", default: 3, null: false
     t.string "leftover_suggestion", default: "ask", null: false
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["invite_code"], name: "index_households_on_invite_code", unique: true
+  end
+
+  create_table "leftover_tray_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "household_id", null: false
+    t.integer "servings", null: false
+    t.bigint "source_entry_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["household_id", "created_at"], name: "index_leftover_tray_items_on_household_id_and_created_at"
+    t.index ["household_id"], name: "index_leftover_tray_items_on_household_id"
+    t.index ["source_entry_id"], name: "index_leftover_tray_items_on_source_entry_id"
   end
 
   create_table "meal_plan_entries", force: :cascade do |t|
@@ -247,6 +259,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_08_000002) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "household_memberships", "households"
   add_foreign_key "household_memberships", "users"
+  add_foreign_key "leftover_tray_items", "households"
+  add_foreign_key "leftover_tray_items", "meal_plan_entries", column: "source_entry_id"
   add_foreign_key "meal_plan_entries", "meal_plan_entries", column: "leftover_of_id"
   add_foreign_key "meal_plan_entries", "meal_plans"
   add_foreign_key "meal_plan_entries", "recipes"

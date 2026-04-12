@@ -6,12 +6,15 @@ import type { ApiError } from "@/types";
 export function HouseholdSettings() {
   const { household, setHousehold } = useHousehold();
   const [name, setName] = useState(household?.name ?? "");
-  const [diners, setDiners] = useState(household?.default_diners ?? 2);
+  const [diners, setDiners] = useState(String(household?.default_diners ?? 2));
   const [leftoverSuggestion, setLeftoverSuggestion] = useState<string>(
     household?.leftover_suggestion ?? "ask"
   );
   const [leftoverSlot, setLeftoverSlot] = useState<string>(
     household?.leftover_default_slot ?? "lunch"
+  );
+  const [leftoverExpiryDays, setLeftoverExpiryDays] = useState(
+    String(household?.leftover_expiry_days ?? 3)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -28,13 +31,14 @@ export function HouseholdSettings() {
     try {
       const res = await updateHousehold({
         name,
-        default_diners: diners,
+        default_diners: Number(diners),
         leftover_suggestion: leftoverSuggestion as "on" | "off" | "ask",
         leftover_default_slot: leftoverSlot as
           | "breakfast"
           | "lunch"
           | "dinner"
           | "ask",
+        leftover_expiry_days: Number(leftoverExpiryDays),
       });
       setHousehold(res.data);
       setSaved(true);
@@ -80,7 +84,7 @@ export function HouseholdSettings() {
           min={1}
           max={20}
           value={diners}
-          onChange={(e) => setDiners(Number(e.target.value))}
+          onChange={(e) => setDiners(e.target.value)}
           className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-garnish-500 focus:outline-none focus:ring-1 focus:ring-garnish-500"
         />
       </div>
@@ -116,6 +120,25 @@ export function HouseholdSettings() {
           <option value="dinner">Dinner</option>
           <option value="ask">Ask each time</option>
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="leftover-expiry-days" className="block text-sm font-medium text-gray-700">
+          Leftover tray expiry (days)
+        </label>
+        <input
+          id="leftover-expiry-days"
+          type="number"
+          required
+          min={1}
+          max={14}
+          value={leftoverExpiryDays}
+          onChange={(e) => setLeftoverExpiryDays(e.target.value)}
+          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-garnish-500 focus:outline-none focus:ring-1 focus:ring-garnish-500"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Tray items disappear from view after this many days so the tray doesn't clutter up.
+        </p>
       </div>
 
       <button

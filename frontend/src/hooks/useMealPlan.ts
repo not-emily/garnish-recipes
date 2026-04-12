@@ -15,13 +15,18 @@ import type {
 } from "@/types/mealPlan";
 import { getConsumer } from "@/lib/cable";
 import { useAuth } from "@/contexts/AuthContext";
+import { LEFTOVER_TRAY_KEY } from "./useLeftoverTray";
 
 // Broadcast payload shapes from MealPlanChannel.
 type Broadcast =
   | { action: "entry_created"; entry: MealPlanEntry; actor_apikey: string }
   | { action: "entry_updated"; entry: MealPlanEntry; actor_apikey: string }
   | { action: "entry_destroyed"; entry_id: number; actor_apikey: string }
-  | { action: "entries_reordered"; entries: MealPlanEntry[]; actor_apikey: string };
+  | { action: "entries_reordered"; entries: MealPlanEntry[]; actor_apikey: string }
+  // Tray item broadcasts are handled by invalidating the tray query rather
+  // than merging into the local entries list.
+  | { action: "tray_item_created"; tray_item: unknown; actor_apikey: string }
+  | { action: "tray_item_destroyed"; tray_item_id: number; actor_apikey: string };
 
 /**
  * Fetches a meal plan week and exposes mutation helpers that optimistically
@@ -56,6 +61,17 @@ export function useMealPlan(weekStart: string) {
           // Ignore our own broadcasts — optimistic update already applied.
           if (data.actor_apikey === user.id) return;
 
+          // Tray broadcasts: just invalidate so the tray refetches. The
+          // payload shape is richer than we need here, and the tray is
+          // stored in a different query key anyway.
+          if (
+            data.action === "tray_item_created" ||
+            data.action === "tray_item_destroyed"
+          ) {
+            queryClient.invalidateQueries({ queryKey: LEFTOVER_TRAY_KEY });
+            return;
+          }
+
           queryClient.setQueryData(
             queryKey,
             (old: { data: MealPlan } | undefined) => {
@@ -82,14 +98,18 @@ export function useMealPlan(weekStart: string) {
     onSuccess: (res) => {
       queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
         if (!old) return old;
+        const newEntries = [res.data, ...(res.leftovers ?? [])];
         return {
           ...old,
           data: {
             ...old.data,
-            entries: [...old.data.entries, res.data].sort(entryOrder),
+            entries: [...old.data.entries, ...newEntries].sort(entryOrder),
           },
         };
       });
+      if (res.tray_items && res.tray_items.length > 0) {
+        queryClient.invalidateQueries({ queryKey: LEFTOVER_TRAY_KEY });
+      }
     },
   });
 
@@ -137,18 +157,26 @@ export function useMealPlan(weekStart: string) {
   });
 
   const deleteEntry = useMutation({
-    mutationFn: (id: number) => deleteMealPlanEntry(weekStart, id),
-    onSuccess: (_res, id) => {
+    mutationFn: ({ id, cascade }: { id: number; cascade?: boolean }) =>
+      deleteMealPlanEntry(weekStart, id, { cascade }),
+    onSuccess: (_res, { id }) => {
       queryClient.setQueryData(queryKey, (old: { data: MealPlan } | undefined) => {
         if (!old) return old;
+        // Filter out the deleted entry + any linked leftover entries (if
+        // cascade was used, the server destroyed them too).
         return {
           ...old,
           data: {
             ...old.data,
-            entries: old.data.entries.filter((e) => e.id !== id),
+            entries: old.data.entries.filter(
+              (e) => e.id !== id && e.leftover_of_id !== id
+            ),
           },
         };
       });
+      // Tray items tied to this source may also have been destroyed by
+      // cascade. Invalidate the tray query so it refetches.
+      queryClient.invalidateQueries({ queryKey: LEFTOVER_TRAY_KEY });
     },
   });
 

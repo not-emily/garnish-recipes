@@ -6,6 +6,10 @@ class MealPlanEntry < ApplicationRecord
   belongs_to :leftover_of, class_name: "MealPlanEntry", optional: true
   has_many :leftovers, class_name: "MealPlanEntry", foreign_key: :leftover_of_id,
                        dependent: :nullify
+  # Tray items pointing at this entry (set only when this is the original
+  # cooked meal). Destroyed alongside the entry — a tray item without its
+  # source makes no sense.
+  has_many :leftover_tray_items, foreign_key: :source_entry_id, dependent: :destroy
 
   validates :date, presence: true
   validates :meal_slot, inclusion: { in: MEAL_SLOTS }
@@ -44,9 +48,10 @@ class MealPlanEntry < ApplicationRecord
   end
 
   # True only for kinds that have ingredients worth rolling into the grocery
-  # list. Events ("dinner at mom's") and notes ("takeout") are meal-plan
-  # annotations with nothing to shop for.
+  # list. Events ("dinner at mom's"), notes ("takeout"), and leftover entries
+  # (food already cooked) are meal-plan annotations with nothing to shop for.
   def grocery_relevant?
+    return false if is_leftover
     kind == "full" || kind == "quick_meal"
   end
 
