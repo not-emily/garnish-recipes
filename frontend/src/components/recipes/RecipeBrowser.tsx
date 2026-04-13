@@ -1,144 +1,272 @@
-import { useState, useDeferredValue, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, X } from "lucide-react";
-import { listRecipes } from "@/api/recipes";
+import { X, SlidersHorizontal } from "lucide-react";
+import { listRecipes, getSmartSections } from "@/api/recipes";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
-import type { RecipeFilters, RecipeType } from "@/types/recipe";
+import type { RecipeFilters, RecipeCategory, RecipeType, RecipeSummary, SmartSections } from "@/types/recipe";
 import { RecipeCard } from "./RecipeCard";
-import { SmartBrowse } from "./SmartBrowse";
-
-// Events aren't surfaced in the main library — they only exist as meal
-// plan annotations. The meal plan picker has its own Event tab.
-const TYPE_FILTERS: { value: RecipeType | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "full", label: "Recipes" },
-  { value: "quick_meal", label: "Quick Meals" },
-];
+import {
+  RecipeFilterPanel,
+  countActiveFilters,
+  DEFAULT_FILTERS,
+  type RecipeFilterState,
+  type SmartFilter,
+} from "./RecipeFilterPanel";
 
 export function RecipeBrowser() {
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
-  const [typeFilter, setTypeFilter] = useState<RecipeType | "all">("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [filterState, setFilterState] = useState<RecipeFilterState>(DEFAULT_FILTERS);
+  const [filterOpen, setFilterOpen] = useState(false);
 
-  const filters: RecipeFilters = {
-    q: deferredSearch || undefined,
-    recipe_type: typeFilter === "all" ? undefined : typeFilter,
-    category: (categoryFilter || undefined) as RecipeFilters["category"],
-  };
+  // Build API filters from filter state. Multi-select protein/category/cuisine
+  // are applied client-side when more than one is selected, since the backend
+  // only supports single-value params.
+  const apiFilters: RecipeFilters = useMemo(() => {
+    const f: RecipeFilters = {
+      recipe_type:
+        filterState.recipeType === "all"
+          ? undefined
+          : filterState.recipeType,
+      sort:
+        filterState.sort === "updated_at" || filterState.sort === "rating"
+          ? undefined
+          : filterState.sort,
+      difficulty: filterState.difficulty || undefined,
+      max_time: filterState.maxTime || undefined,
+    };
+    // Single-value backend filters
+    if (filterState.proteins.length === 1) f.protein = filterState.proteins[0];
+    if (filterState.categories.length === 1) f.category = filterState.categories[0];
+    if (filterState.cuisines.length === 1) f.cuisine = filterState.cuisines[0];
+    return f;
+  }, [filterState]);
 
   // Filtered query — drives the displayed results
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["recipes", filters],
-    queryFn: () => listRecipes(filters),
+    queryKey: ["recipes", apiFilters],
+    queryFn: () => listRecipes(apiFilters),
   });
 
-  // Unfiltered query — drives which filter chips are visible.
-  // Cached separately so it only refetches when recipes are mutated.
+  // Unfiltered query — drives which filter options are visible
   const { data: allData } = useQuery({
     queryKey: ["recipes", {}],
     queryFn: () => listRecipes({}),
   });
 
+  // Smart sections for smart filter client-side filtering + panel preview count
+  const { data: smartData } = useQuery({
+    queryKey: ["smart-sections"],
+    queryFn: getSmartSections,
+  });
+
   const allRecipes = allData?.data ?? [];
 
-  // Derive which filter values actually exist in the household
+  // Derive available filter values from the household's recipes
+  const availableProteins = useMemo(
+    () =>
+      [...new Set(allRecipes.map((r) => r.primary_protein).filter(Boolean))]
+        .sort() as string[],
+    [allRecipes]
+  );
+
+  const availableCuisines = useMemo(
+    () =>
+      [...new Set(allRecipes.map((r) => r.cuisine).filter(Boolean))]
+        .sort() as string[],
+    [allRecipes]
+  );
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set<RecipeCategory>();
+    allRecipes.forEach((r) => {
+      if (r.category) cats.add(r.category);
+    });
+    return [...cats];
+  }, [allRecipes]);
+
   const availableTypes = useMemo(() => {
     const types = new Set<RecipeType>();
     allRecipes.forEach((r) => types.add(r.recipe_type));
     return types;
   }, [allRecipes]);
 
-  const availableCategories = useMemo(() => {
-    const cats = new Set<string>();
-    allRecipes.forEach((r) => {
-      if (r.category) cats.add(r.category);
-    });
-    return cats;
-  }, [allRecipes]);
+  const showTypeFilter = availableTypes.size > 1;
 
-  const visibleTypeFilters = TYPE_FILTERS.filter(
-    (t) => t.value === "all" || availableTypes.has(t.value as RecipeType)
-  );
-  const visibleCategories = RECIPE_CATEGORIES.filter((c) =>
-    availableCategories.has(c.value)
-  );
+  // Apply client-side filters (multi-select, smart filters, rating sort)
+  const recipes = useMemo(() => {
+    let results = data?.data ?? [];
 
-  // Hide the type filter row entirely if there's only one type (just "All")
-  const showTypeFilters = visibleTypeFilters.length > 2;
-  const showCategoryFilters = visibleCategories.length > 0;
+    // Multi-select protein (when >1 selected, backend can't handle it)
+    if (filterState.proteins.length > 1) {
+      results = results.filter(
+        (r) => r.primary_protein && filterState.proteins.includes(r.primary_protein)
+      );
+    }
+    // Multi-select category
+    if (filterState.categories.length > 1) {
+      results = results.filter(
+        (r) => r.category && filterState.categories.includes(r.category)
+      );
+    }
+    // Multi-select cuisine
+    if (filterState.cuisines.length > 1) {
+      results = results.filter(
+        (r) => r.cuisine && filterState.cuisines.includes(r.cuisine)
+      );
+    }
 
-  const recipes = data?.data ?? [];
-  const hasFilters = !!deferredSearch || typeFilter !== "all" || !!categoryFilter;
+    // Smart filter — client-side filtering using smart sections data
+    if (filterState.smartFilter && smartData?.data) {
+      const sections = smartData.data;
+      const smartIds = getSmartFilterIds(filterState.smartFilter, sections);
+      if (smartIds) {
+        results = results.filter((r) => smartIds.has(r.id));
+      }
+    }
 
-  function clearFilters() {
-    setSearch("");
-    setTypeFilter("all");
-    setCategoryFilter("");
+    // Rating sort (not supported by backend)
+    if (filterState.sort === "rating") {
+      results = [...results].sort(
+        (a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0)
+      );
+    }
+
+    return results;
+  }, [data?.data, filterState, smartData?.data]);
+
+  const activeFilterCount = countActiveFilters(filterState);
+  const hasFilters = activeFilterCount > 0;
+
+  // Collect active filter chips for display
+  const filterChips = useMemo(() => {
+    const chips: { key: string; label: string; onRemove: () => void }[] = [];
+
+    if (filterState.recipeType !== "all") {
+      const label = filterState.recipeType === "full" ? "Recipes" : "Quick Meals";
+      chips.push({
+        key: "type",
+        label,
+        onRemove: () => setFilterState((s) => ({ ...s, recipeType: "all" })),
+      });
+    }
+    for (const p of filterState.proteins) {
+      chips.push({
+        key: `protein-${p}`,
+        label: p.charAt(0).toUpperCase() + p.slice(1),
+        onRemove: () =>
+          setFilterState((s) => ({
+            ...s,
+            proteins: s.proteins.filter((x) => x !== p),
+          })),
+      });
+    }
+    for (const c of filterState.categories) {
+      const cat = CATEGORY_LABELS[c] ?? c;
+      chips.push({
+        key: `cat-${c}`,
+        label: cat,
+        onRemove: () =>
+          setFilterState((s) => ({
+            ...s,
+            categories: s.categories.filter((x) => x !== c),
+          })),
+      });
+    }
+    for (const c of filterState.cuisines) {
+      chips.push({
+        key: `cuisine-${c}`,
+        label: c.charAt(0).toUpperCase() + c.slice(1),
+        onRemove: () =>
+          setFilterState((s) => ({
+            ...s,
+            cuisines: s.cuisines.filter((x) => x !== c),
+          })),
+      });
+    }
+    if (filterState.difficulty) {
+      chips.push({
+        key: "difficulty",
+        label: filterState.difficulty.charAt(0).toUpperCase() + filterState.difficulty.slice(1),
+        onRemove: () => setFilterState((s) => ({ ...s, difficulty: null })),
+      });
+    }
+    if (filterState.maxTime) {
+      const label =
+        filterState.maxTime <= 30
+          ? "Under 30 min"
+          : filterState.maxTime <= 60
+            ? "Under 1 hour"
+            : "Under 2 hours";
+      chips.push({
+        key: "time",
+        label,
+        onRemove: () => setFilterState((s) => ({ ...s, maxTime: null })),
+      });
+    }
+    if (filterState.smartFilter) {
+      const labels: Record<SmartFilter, string> = {
+        highly_rated: "Highly Rated",
+        recently_used: "Recently Used",
+        havent_made: "Haven't Made",
+        never_tried: "Never Tried",
+      };
+      chips.push({
+        key: "smart",
+        label: labels[filterState.smartFilter],
+        onRemove: () => setFilterState((s) => ({ ...s, smartFilter: null })),
+      });
+    }
+    if (filterState.sort !== "updated_at") {
+      const labels: Record<string, string> = {
+        title: "Sort: Title",
+        recently_cooked: "Sort: Recently Cooked",
+        prep_time: "Sort: Prep Time",
+        rating: "Sort: Rating",
+      };
+      chips.push({
+        key: "sort",
+        label: labels[filterState.sort] ?? filterState.sort,
+        onRemove: () => setFilterState((s) => ({ ...s, sort: "updated_at" })),
+      });
+    }
+    return chips;
+  }, [filterState]);
+
+  function clearAll() {
+    setFilterState(DEFAULT_FILTERS);
   }
 
   return (
-    <div className="space-y-4">
-      {/* Smart browse sections — hidden when filtering */}
-      {!hasFilters && <SmartBrowse />}
-
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search recipes..."
-          className="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-10 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500"
-        />
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-            aria-label="Clear search"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+    <div className="space-y-3">
+      {/* Filter button */}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setFilterOpen(true)}
+          className="relative inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          aria-label="Filters"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-garnish-600 text-[10px] font-medium text-white">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Type filter chips — only shown when there's more than one type */}
-      {showTypeFilters && (
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {visibleTypeFilters.map((t) => (
+      {/* Filter chips */}
+      {filterChips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {filterChips.map((chip) => (
             <button
-              key={t.value}
+              key={chip.key}
               type="button"
-              onClick={() => setTypeFilter(t.value)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                typeFilter === t.value
-                  ? "bg-garnish-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={chip.onRemove}
+              className="inline-flex items-center gap-1 rounded-full bg-garnish-50 px-2.5 py-1 text-xs font-medium text-garnish-700 hover:bg-garnish-100"
             >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Category filter chips — only shown when categories exist */}
-      {showCategoryFilters && (
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {visibleCategories.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => setCategoryFilter(categoryFilter === c.value ? "" : c.value)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                categoryFilter === c.value
-                  ? "bg-garnish-100 text-garnish-700 ring-1 ring-garnish-300"
-                  : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-              }`}
-            >
-              {c.label}
+              {chip.label}
+              <X className="h-3 w-3" />
             </button>
           ))}
         </div>
@@ -159,7 +287,7 @@ export function RecipeBrowser() {
           Couldn't load recipes. Try again.
         </div>
       ) : recipes.length === 0 ? (
-        <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
+        <EmptyState hasFilters={hasFilters} onClear={clearAll} />
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {recipes.map((recipe) => (
@@ -167,6 +295,20 @@ export function RecipeBrowser() {
           ))}
         </div>
       )}
+
+      {/* Filter panel */}
+      <RecipeFilterPanel
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        filters={filterState}
+        onApply={setFilterState}
+        allRecipes={allRecipes}
+        smartSections={smartData?.data ?? null}
+        availableProteins={availableProteins}
+        availableCuisines={availableCuisines}
+        availableCategories={availableCategories}
+        showTypeFilter={showTypeFilter}
+      />
     </div>
   );
 }
@@ -201,4 +343,34 @@ function EmptyState({
       </p>
     </div>
   );
+}
+
+// --- Helpers ---
+
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  RECIPE_CATEGORIES.map((c) => [c.value, c.label])
+);
+
+function getSmartFilterIds(
+  filter: SmartFilter,
+  sections: SmartSections
+): Set<string> | null {
+  let recipes: RecipeSummary[];
+  switch (filter) {
+    case "highly_rated":
+      recipes = sections.favorites;
+      break;
+    case "recently_used":
+      recipes = sections.recently_used;
+      break;
+    case "havent_made":
+      recipes = sections.havent_made_in_a_while;
+      break;
+    case "never_tried":
+      recipes = sections.never_tried;
+      break;
+    default:
+      return null;
+  }
+  return new Set(recipes.map((r) => r.id));
 }

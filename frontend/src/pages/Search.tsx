@@ -1,9 +1,9 @@
 import { useDeferredValue } from "react";
 import { useSearchParams, Link } from "react-router";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search as SearchIcon } from "lucide-react";
 import { listRecipes } from "@/api/recipes";
 import { RecipeCard } from "@/components/recipes/RecipeCard";
+import { SmartBrowse } from "@/components/recipes/SmartBrowse";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export function SearchPage() {
@@ -25,15 +25,7 @@ export function SearchPage() {
       <PageHeader title="Search" />
 
       {!deferredQuery ? (
-        <div className="mt-20 text-center">
-          <SearchIcon className="mx-auto h-10 w-10 text-gray-300" />
-          <p className="mt-3 text-sm font-medium text-gray-500">
-            Search your recipe library
-          </p>
-          <p className="mt-1 text-xs text-gray-400">
-            Find recipes by name, ingredient, or description
-          </p>
-        </div>
+        <SmartBrowse />
       ) : isLoading ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 6 }).map((_, i) => (

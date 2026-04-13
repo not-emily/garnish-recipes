@@ -59,7 +59,7 @@ class Recipe < ApplicationRecord
   scope :search, ->(query) {
     if query.present?
       term = "%#{sanitize_sql_like(query)}%"
-      where("title ILIKE :t OR cuisine ILIKE :t OR description ILIKE :t", t: term)
+      where("title ILIKE :t OR cuisine ILIKE :t OR description ILIKE :t OR primary_protein ILIKE :t", t: term)
     end
   }
   scope :max_total_time, ->(minutes) {
