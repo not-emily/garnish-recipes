@@ -19,14 +19,14 @@ const navItems = [
 
 type NavItem = (typeof navItems)[number];
 
-function getActiveItem(pathname: string): NavItem {
+function getActiveItem(pathname: string): NavItem | null {
   for (const item of navItems) {
     if (pathname.startsWith(item.to)) return item;
     if ("matchAlso" in item && item.matchAlso?.some((p) => pathname.startsWith(p))) {
       return item;
     }
   }
-  return navItems[0];
+  return null;
 }
 
 export function BottomNav() {
@@ -35,9 +35,19 @@ export function BottomNav() {
   const isSearchMode = pathname === "/search";
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
+  // Remember which tab the user came from when entering search. We use a
+  // ref because setSearchParams(replace:true) wipes location.state, so the
+  // `from` value only survives the initial navigation.
+  const sourceRef = useRef<NavItem>(navItems[0]);
   const fromPath = (state as { from?: string } | null)?.from;
-  const sourceItem = fromPath ? getActiveItem(fromPath) : getActiveItem(pathname);
-  const activeItem = isSearchMode ? sourceItem : getActiveItem(pathname);
+  if (fromPath) {
+    const fromItem = getActiveItem(fromPath);
+    if (fromItem) sourceRef.current = fromItem;
+  } else if (!isSearchMode) {
+    const current = getActiveItem(pathname);
+    if (current) sourceRef.current = current;
+  }
+  const activeItem = isSearchMode ? sourceRef.current : getActiveItem(pathname);
 
   // On desktop, never collapse — show full pill + search bar.
   // On mobile, collapse to back button + search bar.
@@ -50,7 +60,7 @@ export function BottomNav() {
         className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2">
-          {shouldCollapse ? (
+          {shouldCollapse && activeItem ? (
             <CollapsedNav
               backIcon={activeItem.icon}
               backLabel={activeItem.label}
@@ -76,7 +86,7 @@ function FullNav({
   pathname,
   showSearchBar = false,
 }: {
-  activeItem: NavItem;
+  activeItem: NavItem | null;
   pathname: string;
   showSearchBar?: boolean;
 }) {

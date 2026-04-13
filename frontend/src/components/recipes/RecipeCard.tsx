@@ -1,11 +1,12 @@
 import { Link } from "react-router";
-import { Clock, Users, Snowflake, Calendar, Star } from "lucide-react";
+import { Clock, Users, Snowflake, Calendar, Star, CalendarPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import type { RecipeSummary } from "@/types/recipe";
 
 interface RecipeCardProps {
   recipe: RecipeSummary;
   linkState?: Record<string, unknown>;
+  onAddToPlan?: (recipe: RecipeSummary) => void;
 }
 
 const TYPE_BADGE = {
@@ -14,7 +15,7 @@ const TYPE_BADGE = {
   event: { icon: Calendar, label: "Event" },
 } as const;
 
-export function RecipeCard({ recipe, linkState }: RecipeCardProps) {
+export function RecipeCard({ recipe, linkState, onAddToPlan }: RecipeCardProps) {
   const badge = TYPE_BADGE[recipe.recipe_type];
   const TypeIcon = badge?.icon;
   // Defensive: a recipe should always have a title, but in-flight imports
@@ -52,6 +53,21 @@ export function RecipeCard({ recipe, linkState }: RecipeCardProps) {
               <TypeIcon className="h-3 w-3" />
               {badge.label}
             </div>
+          )}
+
+          {onAddToPlan && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAddToPlan(recipe);
+              }}
+              className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-garnish-600"
+              aria-label="Add to meal plan"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
 

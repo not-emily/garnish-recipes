@@ -1,6 +1,6 @@
 import type { ApiError } from "@/types";
 
-const API_BASE = "/api/v1";
+const API_BASE = `${import.meta.env.VITE_API_URL || ""}/api/v1`;
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;

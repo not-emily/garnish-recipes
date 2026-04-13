@@ -1,15 +1,19 @@
-import { useDeferredValue } from "react";
+import { useState, useDeferredValue } from "react";
 import { useSearchParams, Link } from "react-router";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { listRecipes } from "@/api/recipes";
 import { RecipeCard } from "@/components/recipes/RecipeCard";
 import { SmartBrowse } from "@/components/recipes/SmartBrowse";
+import { AddToMealPlanModal } from "@/components/meal-plan/AddToMealPlanModal";
 import { PageHeader } from "@/components/layout/PageHeader";
+import type { RecipeSummary } from "@/types/recipe";
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const deferredQuery = useDeferredValue(query);
+
+  const [planTarget, setPlanTarget] = useState<RecipeSummary | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["recipes", { q: deferredQuery }],
@@ -50,9 +54,24 @@ export function SearchPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              linkState={{ from: "search" }}
+              onAddToPlan={setPlanTarget}
+            />
           ))}
         </div>
+      )}
+
+      {planTarget && (
+        <AddToMealPlanModal
+          open
+          onClose={() => setPlanTarget(null)}
+          recipeId={planTarget.id}
+          recipeTitle={planTarget.title}
+          recipeServings={planTarget.servings}
+        />
       )}
     </div>
   );

@@ -11,9 +11,12 @@ export function getConsumer(): Consumer {
     const token = getAccessToken();
     // Pass JWT as query param — ActionCable doesn't support custom
     // headers on the WebSocket handshake.
+    const wsBase = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace(/^http/, "ws")
+      : "";
     const url = token
-      ? `/cable?token=${encodeURIComponent(token)}`
-      : "/cable";
+      ? `${wsBase}/cable?token=${encodeURIComponent(token)}`
+      : `${wsBase}/cable`;
     consumer = createConsumer(url);
   }
   return consumer;

@@ -1,17 +1,27 @@
 #!/bin/bash
 set -e
 
-echo "==> Pulling latest code..."
-git pull origin main
+REMOTE_HOST="farley_station"
+REMOTE_DIR="~/.garnish"
 
-echo "==> Installing gems..."
-cd backend
-bundle install --without development test
+echo "==> Deploying backend to $REMOTE_HOST..."
 
-echo "==> Running migrations..."
-RAILS_ENV=production bin/rails db:migrate
+ssh "$REMOTE_HOST" bash -s <<EOF
+  set -e
+  cd $REMOTE_DIR
 
-echo "==> Restarting server..."
-bin/rails restart
+  echo "==> Pulling latest code..."
+  git pull origin main
 
-echo "==> Deploy complete!"
+  echo "==> Installing gems..."
+  cd backend
+  bundle install --without development test
+
+  echo "==> Running migrations..."
+  RAILS_ENV=production bin/rails db:migrate
+
+  echo "==> Restarting server..."
+  bin/rails restart
+
+  echo "==> Deploy complete!"
+EOF

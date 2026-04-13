@@ -59,10 +59,12 @@ export function RecipeDetail() {
 
   const backLink =
     locState?.from === "mealPlan"
-      ? { to: "/meal-plan", label: "Meal Plan" }
-      : locState?.from === "collection" && collectionApikey
-        ? { to: `/collections/${collectionApikey}`, label: locState.collectionName ?? "Collection" }
-        : { to: "/recipes", label: "Recipes" };
+      ? { to: "/meal-plan", label: "Meal Plan", goBack: false }
+      : locState?.from === "search"
+        ? { to: "/search", label: "Search", goBack: true }
+        : locState?.from === "collection" && collectionApikey
+          ? { to: `/collections/${collectionApikey}`, label: locState.collectionName ?? "Collection", goBack: false }
+          : { to: "/recipes", label: "Recipes", goBack: false };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["recipe", apikey, collectionApikey],
@@ -157,9 +159,9 @@ export function RecipeDetail() {
     return (
       <div className="mx-auto max-w-3xl px-4 pt-6">
         <p className="text-sm text-gray-500">Couldn't load this recipe.</p>
-        <Link to={backLink.to} className="text-sm text-garnish-600 hover:underline">
+        <BackButton backLink={backLink} className="text-sm text-garnish-600 hover:underline">
           ← Back to {backLink.label}
-        </Link>
+        </BackButton>
       </div>
     );
   }
@@ -173,13 +175,13 @@ export function RecipeDetail() {
     return (
       <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
         <div className="mb-4">
-          <Link
-            to={backLink.to}
+          <BackButton
+            backLink={backLink}
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4" />
             {backLink.label}
-          </Link>
+          </BackButton>
         </div>
         <ImportProgress
           apikey={recipe.id}
@@ -194,13 +196,13 @@ export function RecipeDetail() {
   return (
     <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
       <div className="mb-4 flex items-center justify-between">
-        <Link
-          to={backLink.to}
+        <BackButton
+          backLink={backLink}
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
           <ArrowLeft className="h-4 w-4" />
           {backLink.label}
-        </Link>
+        </BackButton>
 
         {isSharedRecipe ? (
           <button
@@ -519,6 +521,30 @@ export function RecipeDetail() {
         onCancel={() => setConfirmDelete(false)}
       />
     </div>
+  );
+}
+
+function BackButton({
+  backLink,
+  className,
+  children,
+}: {
+  backLink: { to: string; label: string; goBack: boolean };
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  if (backLink.goBack) {
+    return (
+      <button type="button" onClick={() => navigate(-1)} className={className}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <Link to={backLink.to} className={className}>
+      {children}
+    </Link>
   );
 }
 

@@ -126,7 +126,7 @@ export function AddToMealPlanModal({
         aria-label="Close"
         className="absolute inset-0 bg-black/40 transition-opacity"
       />
-      <div className="relative w-full max-w-md overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
+      <div className="relative flex w-full max-w-md max-h-[85vh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div className="min-w-0">
@@ -144,7 +144,7 @@ export function AddToMealPlanModal({
         </div>
 
         {showLeftoverPrompt && household ? (
-          <div className="p-5">
+          <div className="flex-1 overflow-y-auto p-5">
             <LeftoverPrompt
               recipe={{ id: recipeId, title: recipeTitle, servings: recipeServings ?? null } as any}
               target={{ date: selectedDate, slot: selectedSlot }}
@@ -155,7 +155,7 @@ export function AddToMealPlanModal({
             />
           </div>
         ) : (
-          <div className="p-5 space-y-5">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
             {/* Week navigation */}
             <div className="flex items-center justify-between">
               <button

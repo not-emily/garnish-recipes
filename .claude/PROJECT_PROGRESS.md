@@ -2,11 +2,11 @@
 
 ## Plan Files
 Roadmap: [docs/plan/plan.md](../docs/plan/plan.md)
-Current Phase: [docs/plan/phases/phase-7.md](../docs/plan/phases/phase-7.md)
+Current Phase: None
 Latest Weekly Report: [weekly-2026-W15.md](../docs/reports/weekly-2026-W15.md)
 Latest Daily Report: [daily-2026-04-10.md](../docs/reports/daily-2026-04-10.md)
 
-Last Updated: 2026-04-12
+Last Updated: 2026-04-13
 
 ## Current Focus
 **Navigation & Search UX Rework** — iOS 26-inspired adaptive nav, dedicated search page, recipe filter panel, add-to-meal-plan from anywhere. Plan: `docs/plan/plan.md`, 7 phases.
