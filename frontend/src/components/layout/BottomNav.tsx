@@ -3,14 +3,12 @@ import {
   BookOpen,
   CalendarDays,
   ShoppingCart,
-  Settings,
 } from "lucide-react";
 
 const navItems = [
   { to: "/recipes", icon: BookOpen, label: "Recipes", matchAlso: ["/collections"] },
   { to: "/meal-plan", icon: CalendarDays, label: "Meal Plan" },
   { to: "/grocery-list", icon: ShoppingCart, label: "Grocery" },
-  { to: "/settings", icon: Settings, label: "Settings" },
 ] as const;
 
 export function BottomNav() {

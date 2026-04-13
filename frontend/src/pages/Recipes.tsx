@@ -4,6 +4,7 @@ import { Plus, Download } from "lucide-react";
 import { RecipeBrowser } from "@/components/recipes/RecipeBrowser";
 import { ImportModal } from "@/components/recipes/ImportModal";
 import { RecipePageTabs } from "@/components/recipes/RecipePageTabs";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useHousehold } from "@/contexts/HouseholdContext";
 
 export function Recipes() {
@@ -14,10 +15,9 @@ export function Recipes() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 pt-6 pb-8">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Recipes</h1>
+      <PageHeader title="Recipes">
         {canCreate && (
-          <div className="flex items-center gap-2">
+          <>
             <button
               type="button"
               onClick={() => setImportOpen(true)}
@@ -33,9 +33,9 @@ export function Recipes() {
               <Plus className="h-4 w-4" />
               Add
             </Link>
-          </div>
+          </>
         )}
-      </div>
+      </PageHeader>
 
       <RecipePageTabs active="browse" />
 

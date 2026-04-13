@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Pencil,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useGroceryList } from "@/hooks/useGroceryList";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { addGroceryStore, renameGroceryStore, removeGroceryStore } from "@/api/groceryLists";
@@ -77,15 +78,14 @@ export function GroceryList() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pt-6 pb-24">
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">Grocery List</h1>
-        {groceryList?.generated_from && groceryList?.generated_to && (
-          <p className="mt-0.5 text-sm text-gray-500">
-            Generated from {formatMonthDay(groceryList.generated_from)} – {formatMonthDay(groceryList.generated_to)}
-          </p>
-        )}
-      </div>
+      <PageHeader
+        title="Grocery List"
+        subtitle={
+          groceryList?.generated_from && groceryList?.generated_to
+            ? `Generated from ${formatMonthDay(groceryList.generated_from)} – ${formatMonthDay(groceryList.generated_to)}`
+            : undefined
+        }
+      />
 
       {/* Action bar */}
       {(canGenerate || canAdd) && (

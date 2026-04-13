@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useMealPlan } from "@/hooks/useMealPlan";
 import { WeekView } from "@/components/meal-plan/WeekView";
 import { MobileDayView } from "@/components/meal-plan/MobileDayView";
@@ -144,13 +145,7 @@ export function MealPlan() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-6 pb-8">
-      {/* Header row — title + week nav */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Meal Plan</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{formatWeekRange(weekStart)}</p>
-        </div>
-
+      <PageHeader title="Meal Plan" subtitle={formatWeekRange(weekStart)}>
         <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
           <button
             type="button"
@@ -178,7 +173,7 @@ export function MealPlan() {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">

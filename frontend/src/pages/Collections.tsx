@@ -5,6 +5,7 @@ import { listCollections, createCollection } from "@/api/collections";
 import { CollectionCard } from "@/components/collections/CollectionCard";
 import { CollectionForm } from "@/components/collections/CollectionForm";
 import { RecipePageTabs } from "@/components/recipes/RecipePageTabs";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { CollectionInput } from "@/types/collection";
 
 export function Collections() {
@@ -27,8 +28,7 @@ export function Collections() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 pt-6 pb-8">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Recipes</h1>
+      <PageHeader title="Recipes">
         <button
           type="button"
           onClick={() => setFormOpen(true)}
@@ -37,7 +37,7 @@ export function Collections() {
           <Plus className="h-4 w-4" />
           New Collection
         </button>
-      </div>
+      </PageHeader>
 
       <RecipePageTabs active="collections" />
 

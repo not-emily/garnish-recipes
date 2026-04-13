@@ -1,17 +1,25 @@
 # Project Progress - Garnish
 
 ## Plan Files
-Roadmap: None
-Current Phase: None
+Roadmap: [docs/plan/plan.md](../docs/plan/plan.md)
+Current Phase: [docs/plan/phases/phase-2.md](../docs/plan/phases/phase-2.md)
 Latest Weekly Report: [weekly-2026-W15.md](../docs/reports/weekly-2026-W15.md)
 Latest Daily Report: [daily-2026-04-10.md](../docs/reports/daily-2026-04-10.md)
 
 Last Updated: 2026-04-12
 
 ## Current Focus
-All 10 phases of the initial build plan are **complete**. Plan archived to `docs/plan/_archived/v1-initial-build/`.
+**Navigation & Search UX Rework** — iOS 26-inspired adaptive nav, dedicated search page, recipe filter panel, add-to-meal-plan from anywhere. Plan: `docs/plan/plan.md`, 7 phases.
 
 ## Active Tasks
+- [IN PROGRESS] Nav/Search UX Rework (docs/plan/plan.md)
+  - ✓ Phase 1: Header & Settings Relocation — PageHeader component, avatar icon, Settings removed from bottom nav, Collections page updated
+  - ⏭ Phase 2: Adaptive Bottom Nav (3-tab pill + search icon, morph animation)
+  - ⏭ Phase 3: Search Page
+  - ⏭ Phase 4: Recipe Filter Panel (replaces smart browse carousels)
+  - ⏭ Phase 5: Add to Meal Plan Modal
+  - ⏭ Phase 6: EntryPicker Enhancement (protein/cuisine filters)
+  - ⏭ Phase 7: Polish & Cleanup
 - [NEXT] Follow-up: re-trigger leftover prompt on servings_override change in EntryOptions
 - [NEXT] Follow-up: imported recipe ingredient parsing (Phase 4 ingestion stores full text in name field without separating quantity/unit — breaks grocery aggregation)
 - [NEXT] Phase 5C follow-up: debug mobile cross-week swipe bug (see Blockers)
@@ -20,9 +28,7 @@ All 10 phases of the initial build plan are **complete**. Plan archived to `docs
   - ⏭ ImageIngester for scanned cookbooks + direct image uploads
   - ⏭ Re-process action on needs_review recipes
 - [NEXT] Follow-up: recipe detail source attachment download UI
-- [NEXT] Follow-up: "Add to Meal Plan" shortcut from recipe detail page (date + slot picker modal)
 - [NEXT] Follow-up: PDF export option for recipes/collections (alternative to JSON export)
-- [NEXT] Follow-up: navigation/search UX rethink — floating bottom search bar + action buttons, inspired by iOS App Store / iOS 26 patterns. Emily will bring screenshot reference.
 - [NEXT] Follow-up: visual re-theme as part of the navigation rework
 - [NEXT] Follow-up: tutorial/coachmark system for new features and first-time users (spotlight tooltips, tracked per-user, re-triggerable on new feature launches)
 - [NEXT] Follow-up: deeper accessibility audit (color contrast gray-400 → gray-500, focus-visible on all buttons, aria-live for real-time updates)
@@ -54,8 +60,9 @@ All 10 phases of the initial build plan are **complete**. Plan archived to `docs
   - 10D: Pull-to-refresh (arrow indicator + smooth collapse), swipe-to-check + swipe-to-delete on grocery items (removed X button), skip-to-content link, aria-label on nav
 
 ## Next Session
-1. **Navigation/search UX rethink** — floating bottom search, iOS App Store-inspired layout (Emily has screenshot reference)
-2. **Visual re-theme** as part of nav rework
-3. **Tutorial/coachmark system** for first-time users and new features
-4. **Debug mobile cross-week swipe bug**
-5. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
+1. **Nav/Search UX Phase 2**: Adaptive bottom nav with morph animation
+2. **Nav/Search UX Phases 3-7**: Search page, filter panel, add-to-plan modal, EntryPicker, polish
+3. **Visual re-theme** as part of nav rework
+4. **Tutorial/coachmark system** for first-time users and new features
+5. **Debug mobile cross-week swipe bug**
+6. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
