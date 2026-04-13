@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { X, Search, Book, Calendar, StickyNote, Loader2, Plus } from "lucide-react";
 import { listRecipes, createRecipe } from "@/api/recipes";
@@ -194,6 +194,7 @@ function RecipeTab({
   // "quick_meal" means just quick meals. Matches the main RecipeBrowser
   // pattern so the meal-plan experience feels consistent with browsing.
   const [typeFilter, setTypeFilter] = useState<RecipeType | "all">("all");
+  const [proteinFilter, setProteinFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -210,15 +211,29 @@ function RecipeTab({
       {
         q: search || undefined,
         recipe_type: typeFilter === "all" ? undefined : typeFilter,
+        protein: proteinFilter || undefined,
       },
     ],
     queryFn: () =>
       listRecipes({
         q: search || undefined,
         recipe_type: typeFilter === "all" ? undefined : typeFilter,
+        protein: proteinFilter || undefined,
       }),
     placeholderData: keepPreviousData,
   });
+
+  // Unfiltered list to derive available protein values — likely already
+  // cached from RecipeBrowser.
+  const { data: allData } = useQuery({
+    queryKey: ["recipes", {}],
+    queryFn: () => listRecipes({}),
+  });
+
+  const proteins = useMemo(() => {
+    const all = allData?.data ?? [];
+    return [...new Set(all.map((r) => r.primary_protein).filter(Boolean))].sort() as string[];
+  }, [allData?.data]);
 
   if (creating) {
     return (
@@ -269,6 +284,26 @@ function RecipeTab({
           </button>
         ))}
       </div>
+
+      {/* Protein filter — only shown when 2+ proteins exist */}
+      {proteins.length >= 2 && (
+        <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-0.5">
+          {proteins.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setProteinFilter(proteinFilter === p ? null : p)}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                proteinFilter === p
+                  ? "bg-garnish-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isLoading ? (
         <RecipeListSkeleton />

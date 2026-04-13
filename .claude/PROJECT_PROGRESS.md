@@ -2,7 +2,7 @@
 
 ## Plan Files
 Roadmap: [docs/plan/plan.md](../docs/plan/plan.md)
-Current Phase: [docs/plan/phases/phase-6.md](../docs/plan/phases/phase-6.md)
+Current Phase: [docs/plan/phases/phase-7.md](../docs/plan/phases/phase-7.md)
 Latest Weekly Report: [weekly-2026-W15.md](../docs/reports/weekly-2026-W15.md)
 Latest Daily Report: [daily-2026-04-10.md](../docs/reports/daily-2026-04-10.md)
 
@@ -18,7 +18,7 @@ Last Updated: 2026-04-12
   - ✓ Phase 3: Search Page — /search route, ?q= URL param sync with nav bar, recipe grid results, smart browse carousels as discovery content on empty search, lazy-loaded
   - ✓ Phase 4: Recipe Filter Panel — slide-up sheet with smart filters, protein/category/cuisine/difficulty/time/sort, live preview count, filter chips, search bar removed from recipes page (search lives in nav)
   - ✓ Phase 5: Add to Meal Plan Modal — date+slot picker from recipe detail page, week navigation with smart date selection, leftover integration, toast confirmation
-  - ⏭ Phase 6: EntryPicker Enhancement (protein/cuisine filters)
+  - ✓ Phase 6: EntryPicker Enhancement — protein filter pills in meal plan entry picker, single-select toggle, derived from household recipes
   - ⏭ Phase 7: Polish & Cleanup
 - [NEXT] Follow-up: re-trigger leftover prompt on servings_override change in EntryOptions
 - [NEXT] Follow-up: imported recipe ingredient parsing (Phase 4 ingestion stores full text in name field without separating quantity/unit — breaks grocery aggregation)
@@ -60,8 +60,8 @@ Last Updated: 2026-04-12
   - 10D: Pull-to-refresh (arrow indicator + smooth collapse), swipe-to-check + swipe-to-delete on grocery items (removed X button), skip-to-content link, aria-label on nav
 
 ## Next Session
-1. **Nav/Search UX Phase 6**: EntryPicker protein/cuisine filters
-2. **Nav/Search UX Phase 7**: Polish & cleanup
+1. **Nav/Search UX Phase 7**: Polish & cleanup (dead code removal, navigation flow testing)
+2. **Visual re-theme** as part of nav rework
 3. **Visual re-theme** as part of nav rework
 4. **Tutorial/coachmark system** for first-time users and new features
 5. **Debug mobile cross-week swipe bug**
