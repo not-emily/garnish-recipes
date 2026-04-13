@@ -2,9 +2,8 @@ Rails.application.configure do
   config.active_job.queue_adapter = :good_job
 
   config.good_job.execution_mode = case Rails.env
-                                   when "test"        then :inline
-                                   when "development" then :async
-                                   else                    :external
+                                   when "test" then :inline
+                                   else             :async
                                    end
 
   config.good_job.queues = "*"
