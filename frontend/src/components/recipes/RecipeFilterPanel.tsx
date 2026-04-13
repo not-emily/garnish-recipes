@@ -36,7 +36,7 @@ export const DEFAULT_FILTERS: RecipeFilterState = {
   difficulty: null,
   maxTime: null,
   smartFilter: null,
-  sort: "updated_at",
+  sort: "recently_cooked",
 };
 
 const SMART_FILTERS: { value: SmartFilter; label: string }[] = [
@@ -54,9 +54,9 @@ const TIME_OPTIONS: { value: number | null; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: RecipeSortOption; label: string }[] = [
+  { value: "recently_cooked", label: "Recently Cooked" },
   { value: "updated_at", label: "Last Updated" },
   { value: "title", label: "Title" },
-  { value: "recently_cooked", label: "Recently Cooked" },
   { value: "prep_time", label: "Prep Time" },
   { value: "rating", label: "Rating" },
 ];
@@ -76,7 +76,7 @@ export function countActiveFilters(filters: RecipeFilterState): number {
   if (filters.difficulty) count++;
   if (filters.maxTime) count++;
   if (filters.smartFilter) count++;
-  if (filters.sort !== "updated_at") count++;
+  if (filters.sort !== DEFAULT_FILTERS.sort) count++;
   return count;
 }
 

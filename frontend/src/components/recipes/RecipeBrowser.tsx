@@ -27,7 +27,7 @@ export function RecipeBrowser() {
           ? undefined
           : filterState.recipeType,
       sort:
-        filterState.sort === "updated_at" || filterState.sort === "rating"
+        filterState.sort === "recently_cooked"
           ? undefined
           : filterState.sort,
       difficulty: filterState.difficulty || undefined,
@@ -215,8 +215,9 @@ export function RecipeBrowser() {
         onRemove: () => setFilterState((s) => ({ ...s, smartFilter: null })),
       });
     }
-    if (filterState.sort !== "updated_at") {
+    if (filterState.sort !== DEFAULT_FILTERS.sort) {
       const labels: Record<string, string> = {
+        updated_at: "Sort: Last Updated",
         title: "Sort: Title",
         recently_cooked: "Sort: Recently Cooked",
         prep_time: "Sort: Prep Time",
@@ -225,7 +226,7 @@ export function RecipeBrowser() {
       chips.push({
         key: "sort",
         label: labels[filterState.sort] ?? filterState.sort,
-        onRemove: () => setFilterState((s) => ({ ...s, sort: "updated_at" })),
+        onRemove: () => setFilterState((s) => ({ ...s, sort: DEFAULT_FILTERS.sort })),
       });
     }
     return chips;

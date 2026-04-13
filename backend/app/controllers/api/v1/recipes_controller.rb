@@ -208,8 +208,12 @@ module Api
           scope.order(last_cooked_at: :desc, updated_at: :desc)
         when "prep_time"
           scope.order(Arel.sql("total_time_minutes ASC NULLS LAST"))
-        else
+        when "rating"
+          scope.order(average_rating: :desc, updated_at: :desc)
+        when "updated_at"
           scope.order(updated_at: :desc)
+        else
+          scope.order(last_cooked_at: :desc, updated_at: :desc)
         end
       end
 

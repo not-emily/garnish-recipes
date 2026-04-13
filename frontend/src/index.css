@@ -20,6 +20,11 @@ body {
   overscroll-behavior: none;
 }
 
+/* Prevent iOS Safari from zooming on input focus (requires >= 16px) */
+input, textarea, select {
+  font-size: 16px;
+}
+
 @supports (padding: env(safe-area-inset-top)) {
   body {
     padding-top: env(safe-area-inset-top);

@@ -62,8 +62,18 @@ Last Updated: 2026-04-13
   - Phase 7: Polish & Cleanup (dead code, BottomNav fixes, RecipeCard/RecipeDetail/Search refinements, deploy script hardening)
 
 ## Next Session
-1. **Visual re-theme** as part of nav rework
-2. **Tutorial/coachmark system** for first-time users and new features
-3. **Debug mobile cross-week swipe bug**
-4. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
-5. **Re-trigger leftover prompt** on servings_override change
+1. **Recipe images** — ability to add/edit images for recipes
+2. **Cooking mode** — toggle between recipes in a meal slot (e.g. entree + 2 sides) while cooking
+3. **Fix recipe list default sort** — currently ordered by last edit, which isn't useful. Alphabetical or something smarter.
+4. **Quick filter pills on recipe browse** — expose category filters outside the full filter panel for fast one-tap filtering
+5. **Fraction support for ingredient quantities** — number field can't express fractions like ⅔ or 1½; need a text input that accepts and displays common fractions
+6. **"What's on the menu" banner** — show today's meal plan recipes at the top of the recipe browse page
+7. **Fix mobile input zoom** — tapping text inputs (sign up, search, recipe fields) causes unwanted screen zoom on mobile
+6. **Visual re-theme** as part of nav rework
+7. **Tutorial/coachmark system** for first-time users and new features
+8. **Debug mobile cross-week swipe bug**
+9. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
+10. **Re-trigger leftover prompt** on servings_override change
+11. **Password validation** — add proper password strength/format validation
+12. **Google OAuth** — add Google as an OAuth sign-in option
+13. **Settings page cleanup** — UI cleanup and polish for the settings page
