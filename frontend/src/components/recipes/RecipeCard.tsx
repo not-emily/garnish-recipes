@@ -34,16 +34,16 @@ export function RecipeCard({ recipe, linkState, onAddToPlan }: RecipeCardProps) 
         state={linkState}
         className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
       >
-        <div className="relative aspect-[4/3] bg-gradient-to-br from-garnish-50 to-garnish-100">
+        <div className="relative h-0 overflow-hidden bg-gradient-to-br from-garnish-50 to-garnish-100" style={{ paddingBottom: '75%' }}>
           {recipe.image_url ? (
             <img
               src={recipe.image_url}
               alt={title}
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-4xl text-garnish-300">
+            <div className="absolute inset-0 flex items-center justify-center text-4xl text-garnish-300">
               {initial}
             </div>
           )}

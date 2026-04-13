@@ -77,3 +77,4 @@ Last Updated: 2026-04-13
 11. **Password validation** — add proper password strength/format validation
 12. **Google OAuth** — add Google as an OAuth sign-in option
 13. **Settings page cleanup** — UI cleanup and polish for the settings page
+14. **Instruction sections** — add section/group support to recipe instructions (mirror ingredient_groups pattern) for organizing steps in larger recipes
