@@ -36,7 +36,7 @@ export function ShareModal({
       queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
     onError: (err) => {
-      const apiErr = err as ApiError;
+      const apiErr = err as unknown as ApiError;
       setError(apiErr?.error?.message || "Couldn't share collection");
     },
   });

@@ -281,5 +281,7 @@ function applyBroadcast(entries: MealPlanEntry[], data: Broadcast): MealPlanEntr
       const updated = new Map(data.entries.map((e) => [e.id, e]));
       return entries.map((e) => updated.get(e.id) ?? e).sort(entryOrder);
     }
+    default:
+      return entries;
   }
 }

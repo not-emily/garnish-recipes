@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, CalendarDays, Loader2 } from "lucide-react";
 import { createMealPlanEntry } from "@/api/mealPlans";
 import { useHousehold } from "@/contexts/HouseholdContext";
@@ -96,7 +95,7 @@ export function AddToMealPlanModal({
         return;
       }
     }
-    mutation.mutate();
+    mutation.mutate(undefined);
   }
 
   function handleLeftoverConfirm(

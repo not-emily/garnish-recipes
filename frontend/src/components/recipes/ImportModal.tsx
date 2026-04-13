@@ -74,10 +74,10 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
   const pending = urlMutation.isPending || fileMutation.isPending;
   const errorMessage =
     (urlMutation.error
-      ? (urlMutation.error as ApiError).error?.message
+      ? (urlMutation.error as unknown as ApiError).error?.message
       : null) ??
     (fileMutation.error
-      ? (fileMutation.error as ApiError).error?.message
+      ? (fileMutation.error as unknown as ApiError).error?.message
       : null);
 
   return (

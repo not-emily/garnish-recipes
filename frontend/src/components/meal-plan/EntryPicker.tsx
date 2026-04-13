@@ -126,7 +126,7 @@ export function EntryPicker({
         {pendingLeftover && household ? (
           <div className="flex-1 overflow-y-auto p-5">
             <LeftoverPrompt
-              recipe={pendingLeftover}
+              recipe={{ id: pendingLeftover.id, title: pendingLeftover.title, servings: pendingLeftover.servings ?? null }}
               target={target}
               household={household}
               onConfirm={handleLeftoverConfirm}
@@ -401,7 +401,7 @@ function QuickMealCreateForm({
     },
   });
 
-  const err = mutation.error ? (mutation.error as ApiError).error?.message : null;
+  const err = mutation.error ? (mutation.error as unknown as ApiError).error?.message : null;
 
   return (
     <form
@@ -606,7 +606,7 @@ function EventCreateForm({
     },
   });
 
-  const err = mutation.error ? (mutation.error as ApiError).error?.message : null;
+  const err = mutation.error ? (mutation.error as unknown as ApiError).error?.message : null;
 
   return (
     <form

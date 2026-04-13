@@ -117,7 +117,7 @@ export function MealPlan() {
           // 409 with dependents → open the cascade dialog. Everything else
           // bubbles up as a generic mutation error (no toast yet; future
           // work).
-          const apiError = err as ApiError;
+          const apiError = err as unknown as ApiError;
           if (apiError?.error?.code === "has_dependents") {
             const details = apiError.error.details as unknown as {
               linked_leftover_count: number;

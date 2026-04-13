@@ -98,7 +98,7 @@ export function ApiKeyForm() {
       }
     },
     onError: (err) => {
-      const apiErr = err as ApiError;
+      const apiErr = err as unknown as ApiError;
       setTestResult({
         ok: false,
         message: apiErr.error?.message ?? "Unknown error",
@@ -154,7 +154,7 @@ export function ApiKeyForm() {
   const canTest = provider && model.trim() && (apiKey || settings?.has_llm_key);
   const saveError =
     saveMutation.error
-      ? (saveMutation.error as ApiError).error?.message
+      ? (saveMutation.error as unknown as ApiError).error?.message
       : null;
 
   return (

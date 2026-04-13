@@ -19,7 +19,7 @@ import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
 import { SwipeableGroceryItem } from "@/components/grocery/SwipeableGroceryItem";
-import { todayIso, addDays, formatMonthDay, formatWeekdayShort } from "@/lib/weekUtils";
+import { todayIso, addDays, formatMonthDay } from "@/lib/weekUtils";
 
 export function GroceryList() {
   const { household, setHousehold } = useHousehold();
@@ -278,7 +278,6 @@ export function GroceryList() {
                         onUpdate={(input) =>
                           updateItem.mutate({ id: item.id, input })
                         }
-                        onRemove={() => removeItem.mutate(item.id)}
                       />
                     </SwipeableGroceryItem>
                   ))}
@@ -398,14 +397,12 @@ function GroceryItemRow({
   canEdit,
   onCheck,
   onUpdate,
-  onRemove,
 }: {
   item: GroceryListItem;
   stores: string[];
   canEdit: boolean;
   onCheck: () => void;
   onUpdate: (input: Record<string, unknown>) => void;
-  onRemove: () => void;
 }) {
   const [editing, setEditing] = useState(false);
 
