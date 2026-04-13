@@ -13,6 +13,7 @@ import {
   Timer,
   AlertCircle,
   FolderPlus,
+  CalendarPlus,
   Copy,
   Check,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import { RECIPE_CATEGORIES } from "@/types/recipe";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddToCollectionModal } from "@/components/collections/AddToCollectionModal";
+import { AddToMealPlanModal } from "@/components/meal-plan/AddToMealPlanModal";
 import { RatingStars } from "@/components/recipes/RatingStars";
 import { upsertRating, deleteRating } from "@/api/ratings";
 
@@ -37,6 +39,7 @@ export function RecipeDetail() {
   const { toast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+  const [mealPlanModalOpen, setMealPlanModalOpen] = useState(false);
 
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
@@ -224,6 +227,14 @@ export function RecipeDetail() {
           </button>
         ) : (
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMealPlanModalOpen(true)}
+              className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+              aria-label="Add to meal plan"
+            >
+              <CalendarPlus className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() => setCollectionModalOpen(true)}
@@ -482,6 +493,14 @@ export function RecipeDetail() {
       <p className="mt-8 text-xs text-gray-400">
         Added by {recipe.contributed_by.name}
       </p>
+
+      <AddToMealPlanModal
+        open={mealPlanModalOpen}
+        onClose={() => setMealPlanModalOpen(false)}
+        recipeId={recipe.id}
+        recipeTitle={recipe.title}
+        recipeServings={recipe.servings}
+      />
 
       <AddToCollectionModal
         open={collectionModalOpen}
