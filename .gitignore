@@ -1,6 +1,7 @@
 # Backend
 backend/tmp/
 backend/log/
+log/
 backend/storage/
 backend/config/application.yml
 backend/.bundle/
