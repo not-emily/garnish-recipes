@@ -174,7 +174,7 @@ export function RecipeDetail() {
   if (recipe.import_status === "importing" || recipe.import_status === "failed") {
     return (
       <div className="mx-auto max-w-3xl px-4 pt-4 pb-8">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <BackButton
             backLink={backLink}
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
@@ -182,6 +182,16 @@ export function RecipeDetail() {
             <ArrowLeft className="h-4 w-4" />
             {backLink.label}
           </BackButton>
+          {recipe.import_status === "failed" && canEdit && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+              aria-label="Delete recipe"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <ImportProgress
           apikey={recipe.id}
@@ -189,6 +199,18 @@ export function RecipeDetail() {
           sourceUrl={recipe.source_url}
           errorMessage={recipe.import_error}
         />
+        {confirmDelete && (
+          <ConfirmDialog
+            open={confirmDelete}
+            title="Delete recipe?"
+            message="This can't be undone. The recipe will be permanently deleted."
+            confirmLabel="Delete"
+            variant="danger"
+            isSubmitting={deleteMutation.isPending}
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => setConfirmDelete(false)}
+          />
+        )}
       </div>
     );
   }
