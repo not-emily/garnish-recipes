@@ -2,7 +2,7 @@
 
 ## Plan Files
 Roadmap: [docs/plan/plan.md](../docs/plan/plan.md)
-Current Phase: [docs/plan/phases/phase-2.md](../docs/plan/phases/phase-2.md)
+Current Phase: [docs/plan/phases/phase-4.md](../docs/plan/phases/phase-4.md)
 Latest Weekly Report: [weekly-2026-W15.md](../docs/reports/weekly-2026-W15.md)
 Latest Daily Report: [daily-2026-04-10.md](../docs/reports/daily-2026-04-10.md)
 
@@ -14,8 +14,8 @@ Last Updated: 2026-04-12
 ## Active Tasks
 - [IN PROGRESS] Nav/Search UX Rework (docs/plan/plan.md)
   - ✓ Phase 1: Header & Settings Relocation — PageHeader component, avatar icon, Settings removed from bottom nav, Collections page updated
-  - ⏭ Phase 2: Adaptive Bottom Nav (3-tab pill + search icon, morph animation)
-  - ⏭ Phase 3: Search Page
+  - ✓ Phase 2: Adaptive Bottom Nav — 3-tab pill + search icon, layoutId morph animation, responsive (mobile collapses, desktop keeps full pill), spring physics
+  - ✓ Phase 3: Search Page — /search route, ?q= URL param sync with nav bar, recipe grid results, empty/no-results states, lazy-loaded
   - ⏭ Phase 4: Recipe Filter Panel (replaces smart browse carousels)
   - ⏭ Phase 5: Add to Meal Plan Modal
   - ⏭ Phase 6: EntryPicker Enhancement (protein/cuisine filters)
@@ -60,8 +60,8 @@ Last Updated: 2026-04-12
   - 10D: Pull-to-refresh (arrow indicator + smooth collapse), swipe-to-check + swipe-to-delete on grocery items (removed X button), skip-to-content link, aria-label on nav
 
 ## Next Session
-1. **Nav/Search UX Phase 2**: Adaptive bottom nav with morph animation
-2. **Nav/Search UX Phases 3-7**: Search page, filter panel, add-to-plan modal, EntryPicker, polish
+1. **Nav/Search UX Phase 4**: Recipe filter panel (replaces smart browse carousels)
+2. **Nav/Search UX Phases 5-7**: Add-to-plan modal, EntryPicker enhancement, polish
 3. **Visual re-theme** as part of nav rework
 4. **Tutorial/coachmark system** for first-time users and new features
 5. **Debug mobile cross-week swipe bug**

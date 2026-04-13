@@ -1,9 +1,15 @@
-import { NavLink, useLocation } from "react-router";
+import { useRef } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
+import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   CalendarDays,
   ShoppingCart,
+  Search,
+  X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const navItems = [
   { to: "/recipes", icon: BookOpen, label: "Recipes", matchAlso: ["/collections"] },
@@ -11,34 +17,209 @@ const navItems = [
   { to: "/grocery-list", icon: ShoppingCart, label: "Grocery" },
 ] as const;
 
+type NavItem = (typeof navItems)[number];
+
+function getActiveItem(pathname: string): NavItem {
+  for (const item of navItems) {
+    if (pathname.startsWith(item.to)) return item;
+    if ("matchAlso" in item && item.matchAlso?.some((p) => pathname.startsWith(p))) {
+      return item;
+    }
+  }
+  return navItems[0];
+}
+
 export function BottomNav() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const navigate = useNavigate();
+  const isSearchMode = pathname === "/search";
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const fromPath = (state as { from?: string } | null)?.from;
+  const sourceItem = fromPath ? getActiveItem(fromPath) : getActiveItem(pathname);
+  const activeItem = isSearchMode ? sourceItem : getActiveItem(pathname);
+
+  // On desktop, never collapse — show full pill + search bar.
+  // On mobile, collapse to back button + search bar.
+  const shouldCollapse = isSearchMode && !isDesktop;
 
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto flex max-w-lg items-center justify-around">
-        {navItems.map(({ to, icon: Icon, label, ...rest }) => {
-          const matchAlso = "matchAlso" in rest ? rest.matchAlso : undefined;
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => {
-                const extraMatch = matchAlso?.some((p) => pathname.startsWith(p)) ?? false;
-                const active = isActive || extraMatch;
-                return `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                  active
-                    ? "text-garnish-600"
-                    : "text-gray-400 hover:text-gray-600"
-                }`;
-              }}
-            >
-              <Icon className="h-5 w-5" />
-              <span>{label}</span>
-            </NavLink>
-          );
-        })}
-      </div>
-    </nav>
+    <LayoutGroup>
+      <nav
+        aria-label="Main navigation"
+        className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
+      >
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2">
+          {shouldCollapse ? (
+            <CollapsedNav
+              backIcon={activeItem.icon}
+              backLabel={activeItem.label}
+              onBack={() => navigate(-1)}
+            />
+          ) : (
+            <FullNav
+              activeItem={activeItem}
+              pathname={pathname}
+              showSearchBar={isSearchMode}
+            />
+          )}
+        </div>
+      </nav>
+    </LayoutGroup>
   );
 }
+
+// --- Full mode: pill with all tabs + search icon (or search bar on desktop) ---
+
+function FullNav({
+  activeItem,
+  pathname,
+  showSearchBar = false,
+}: {
+  activeItem: NavItem;
+  pathname: string;
+  showSearchBar?: boolean;
+}) {
+  return (
+    <>
+      <motion.div
+        layoutId="nav-pill"
+        className="flex items-center gap-1 rounded-full bg-gray-100/90 p-1 shadow-sm backdrop-blur-sm"
+        transition={springTransition}
+      >
+        {navItems.map((item) => {
+          const isActive = item === activeItem;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full"
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="nav-active-bg"
+                  className="absolute inset-0 rounded-full bg-white shadow-sm"
+                  transition={springTransition}
+                />
+              )}
+              <Icon
+                className={`relative z-10 h-5 w-5 transition-colors ${
+                  isActive ? "text-garnish-600" : "text-gray-400"
+                }`}
+              />
+            </Link>
+          );
+        })}
+      </motion.div>
+
+      {showSearchBar ? (
+        <SearchBar />
+      ) : (
+        <Link
+          to="/search"
+          state={{ from: pathname }}
+          aria-label="Search"
+        >
+          <motion.div
+            layoutId="nav-search"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
+            transition={springTransition}
+          >
+            <Search className="h-5 w-5 text-gray-500" />
+          </motion.div>
+        </Link>
+      )}
+    </>
+  );
+}
+
+// --- Collapsed mode (mobile only): back icon + search bar ---
+
+function CollapsedNav({
+  backIcon: BackIcon,
+  backLabel,
+  onBack,
+}: {
+  backIcon: LucideIcon;
+  backLabel: string;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <motion.button
+        type="button"
+        onClick={onBack}
+        aria-label={`Back to ${backLabel}`}
+        layoutId="nav-pill"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
+        transition={springTransition}
+      >
+        <BackIcon className="h-5 w-5 text-garnish-600" />
+      </motion.button>
+
+      <SearchBar />
+    </>
+  );
+}
+
+// --- Shared search bar used by both collapsed and desktop-expanded modes ---
+
+function SearchBar() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get("q") || "";
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleChange(value: string) {
+    setSearchParams(value ? { q: value } : {}, { replace: true });
+  }
+
+  return (
+    <motion.div
+      layoutId="nav-search"
+      className="relative flex min-w-0 flex-1 items-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm md:max-w-sm"
+      transition={springTransition}
+    >
+      <form role="search" className="flex flex-1 items-center" onSubmit={(e) => e.preventDefault()}>
+        <Search className="ml-3 h-4 w-4 shrink-0 text-gray-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Search recipes..."
+          autoFocus
+          className="flex-1 bg-transparent py-2.5 pl-2 pr-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+          aria-label="Search recipes"
+        />
+        <AnimatePresence>
+          {query && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.1 }}
+              onClick={() => {
+                handleChange("");
+                inputRef.current?.focus();
+              }}
+              className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-white"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </form>
+    </motion.div>
+  );
+}
+
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};

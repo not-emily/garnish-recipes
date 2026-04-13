@@ -21,6 +21,7 @@ const MealPlan = lazy(() => import("@/pages/MealPlan"));
 const GroceryList = lazy(() => import("@/pages/GroceryList"));
 const Collections = lazy(() => import("@/pages/Collections"));
 const CollectionDetail = lazy(() => import("@/pages/CollectionDetail"));
+const Search = lazy(() => import("@/pages/Search"));
 const Settings = lazy(() => import("@/pages/Settings"));
 
 const queryClient = new QueryClient({
@@ -84,6 +85,7 @@ function AppRoutes() {
         <Route path="/recipes/:apikey/edit" element={<RecipeEdit />} />
         <Route path="/collections" element={<Collections />} />
         <Route path="/collections/:apikey" element={<CollectionDetail />} />
+        <Route path="/search" element={<Search />} />
         <Route path="/meal-plan" element={<MealPlan />} />
         <Route path="/grocery-list" element={<GroceryList />} />
         <Route path="/settings" element={<Settings />} />
