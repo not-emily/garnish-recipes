@@ -1,25 +1,18 @@
 # Project Progress - Garnish
 
 ## Plan Files
-Roadmap: [docs/plan/plan.md](../docs/plan/plan.md)
+Roadmap: None
 Current Phase: None
 Latest Weekly Report: [weekly-2026-W15.md](../docs/reports/weekly-2026-W15.md)
 Latest Daily Report: [daily-2026-04-10.md](../docs/reports/daily-2026-04-10.md)
 
 Last Updated: 2026-04-13
 
+
 ## Current Focus
-**Navigation & Search UX Rework** — iOS 26-inspired adaptive nav, dedicated search page, recipe filter panel, add-to-meal-plan from anywhere. Plan: `docs/plan/plan.md`, 7 phases.
+**Nav/Search UX Rework complete!** Plan finished — all 7 phases shipped. Moving on to follow-up items and next initiatives.
 
 ## Active Tasks
-- [IN PROGRESS] Nav/Search UX Rework (docs/plan/plan.md)
-  - ✓ Phase 1: Header & Settings Relocation — PageHeader component, avatar icon, Settings removed from bottom nav, Collections page updated
-  - ✓ Phase 2: Adaptive Bottom Nav — 3-tab pill + search icon, layoutId morph animation, responsive (mobile collapses, desktop keeps full pill), spring physics
-  - ✓ Phase 3: Search Page — /search route, ?q= URL param sync with nav bar, recipe grid results, smart browse carousels as discovery content on empty search, lazy-loaded
-  - ✓ Phase 4: Recipe Filter Panel — slide-up sheet with smart filters, protein/category/cuisine/difficulty/time/sort, live preview count, filter chips, search bar removed from recipes page (search lives in nav)
-  - ✓ Phase 5: Add to Meal Plan Modal — date+slot picker from recipe detail page, week navigation with smart date selection, leftover integration, toast confirmation
-  - ✓ Phase 6: EntryPicker Enhancement — protein filter pills in meal plan entry picker, single-select toggle, derived from household recipes
-  - ⏭ Phase 7: Polish & Cleanup
 - [NEXT] Follow-up: re-trigger leftover prompt on servings_override change in EntryOptions
 - [NEXT] Follow-up: imported recipe ingredient parsing (Phase 4 ingestion stores full text in name field without separating quantity/unit — breaks grocery aggregation)
 - [NEXT] Phase 5C follow-up: debug mobile cross-week swipe bug (see Blockers)
@@ -59,10 +52,18 @@ Last Updated: 2026-04-13
   - 10C: Custom Toast component (swipe-up-to-dismiss), ErrorBoundary, OfflineBanner, page enter transitions, toast integration on key mutations
   - 10D: Pull-to-refresh (arrow indicator + smooth collapse), swipe-to-check + swipe-to-delete on grocery items (removed X button), skip-to-content link, aria-label on nav
 
+- ✅ Nav/Search UX Rework — all 7 phases complete (2026-04-13)
+  - Phase 1: Header & Settings Relocation
+  - Phase 2: Adaptive Bottom Nav (pill + layoutId morph)
+  - Phase 3: Search Page (/search, URL param sync, discovery carousels)
+  - Phase 4: Recipe Filter Panel (slide-up sheet, smart filters, filter chips)
+  - Phase 5: Add to Meal Plan Modal (date+slot picker, leftover integration)
+  - Phase 6: EntryPicker Enhancement (protein filter pills)
+  - Phase 7: Polish & Cleanup (dead code, BottomNav fixes, RecipeCard/RecipeDetail/Search refinements, deploy script hardening)
+
 ## Next Session
-1. **Nav/Search UX Phase 7**: Polish & cleanup (dead code removal, navigation flow testing)
-2. **Visual re-theme** as part of nav rework
-3. **Visual re-theme** as part of nav rework
-4. **Tutorial/coachmark system** for first-time users and new features
-5. **Debug mobile cross-week swipe bug**
-6. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
+1. **Visual re-theme** as part of nav rework
+2. **Tutorial/coachmark system** for first-time users and new features
+3. **Debug mobile cross-week swipe bug**
+4. **Fix imported recipe ingredient parsing** (Phase 4 ingestion quality)
+5. **Re-trigger leftover prompt** on servings_override change
