@@ -8,6 +8,8 @@ echo "==> Deploying backend to $REMOTE_HOST..."
 
 ssh "$REMOTE_HOST" bash -s <<EOF
   set -e
+  export PATH="\$HOME/.rbenv/bin:\$PATH"
+  eval "\$(rbenv init -)"
   cd $REMOTE_DIR
 
   echo "==> Pulling latest code..."
