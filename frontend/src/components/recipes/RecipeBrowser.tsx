@@ -27,7 +27,7 @@ export function RecipeBrowser() {
           ? undefined
           : filterState.recipeType,
       sort:
-        filterState.sort === "recently_cooked"
+        filterState.sort === "recently_cooked" || filterState.sort === "rating"
           ? undefined
           : filterState.sort,
       difficulty: filterState.difficulty || undefined,
