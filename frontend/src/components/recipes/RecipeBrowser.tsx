@@ -26,10 +26,10 @@ export function RecipeBrowser() {
         filterState.recipeType === "all"
           ? undefined
           : filterState.recipeType,
-      sort:
-        filterState.sort === "recently_cooked" || filterState.sort === "rating"
-          ? undefined
-          : filterState.sort,
+      // "rating" is a client-side sort (see below); send everything else
+      // explicitly so we don't depend on the backend's default being a
+      // specific value.
+      sort: filterState.sort === "rating" ? undefined : filterState.sort,
       difficulty: filterState.difficulty || undefined,
       max_time: filterState.maxTime || undefined,
     };

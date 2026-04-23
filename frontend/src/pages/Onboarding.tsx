@@ -4,7 +4,7 @@ import { createHousehold, joinHousehold } from "@/api/households";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { Home, UserPlus } from "lucide-react";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 export function Onboarding() {
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
@@ -76,8 +76,7 @@ function CreateForm({ onBack }: { onBack: () => void }) {
       setHousehold(res.data);
       navigate("/recipes");
     } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError?.error?.message || "Something went wrong");
+      setError(isApiError(err) ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
     }
@@ -160,8 +159,7 @@ function JoinForm({ onBack }: { onBack: () => void }) {
       setHousehold(res.data);
       navigate("/recipes");
     } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError?.error?.message || "Something went wrong");
+      setError(isApiError(err) ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
     }

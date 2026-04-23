@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { isApiError } from "@/api/client";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { HouseholdProvider, useHousehold } from "@/contexts/HouseholdContext";
 import { useSessionLoading } from "@/hooks/useSessionLoading";
@@ -28,7 +29,21 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60,
-      retry: 1,
+      // Auto-retry only transient errors (5xx, network, timeout). Never retry
+      // auth/client/offline — auth will redirect, client is a user error,
+      // offline is surfaced by the banner.
+      retry: (failureCount, error) => {
+        if (!isApiError(error)) return false;
+        if (!error.retryable) return false;
+        return failureCount < 3;
+      },
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    },
+    mutations: {
+      // Mutations never auto-retry: the risk of double-writes (duplicate
+      // grocery items, duplicate ratings) outweighs the convenience.
+      // Call sites surface a manual retry affordance instead.
+      retry: false,
     },
   },
 });

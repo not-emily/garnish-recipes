@@ -7,7 +7,7 @@ import {
   testLlmConnection,
   type LlmProvider,
 } from "@/api/userSettings";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const PROVIDER_OPTIONS: { value: LlmProvider; label: string; hint: string }[] = [
@@ -98,10 +98,9 @@ export function ApiKeyForm() {
       }
     },
     onError: (err) => {
-      const apiErr = err as unknown as ApiError;
       setTestResult({
         ok: false,
-        message: apiErr.error?.message ?? "Unknown error",
+        message: isApiError(err) ? err.message : "Unknown error",
       });
     },
   });
@@ -152,10 +151,7 @@ export function ApiKeyForm() {
   const selectedProvider = PROVIDER_OPTIONS.find((p) => p.value === provider);
   const hasCredentials = settings?.has_llm_key && settings?.llm_provider && settings?.llm_model;
   const canTest = provider && model.trim() && (apiKey || settings?.has_llm_key);
-  const saveError =
-    saveMutation.error
-      ? (saveMutation.error as unknown as ApiError).error?.message
-      : null;
+  const saveError = isApiError(saveMutation.error) ? saveMutation.error.message : null;
 
   return (
     <form

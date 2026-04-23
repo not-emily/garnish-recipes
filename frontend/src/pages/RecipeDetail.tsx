@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Clock,
@@ -28,12 +28,12 @@ import { AddToCollectionModal } from "@/components/collections/AddToCollectionMo
 import { AddToMealPlanModal } from "@/components/meal-plan/AddToMealPlanModal";
 import { RatingStars } from "@/components/recipes/RatingStars";
 import { upsertRating, deleteRating } from "@/api/ratings";
+import { useOptimisticMutation } from "@/lib/useOptimisticMutation";
 
 export function RecipeDetail() {
   const { apikey } = useParams<{ apikey: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const { household } = useHousehold();
 
   const { toast } = useToast();
@@ -72,32 +72,35 @@ export function RecipeDetail() {
     enabled: !!apikey,
   });
 
-  const deleteMutation = useMutation({
+  const deleteMutation = useOptimisticMutation({
     mutationFn: () => deleteRecipe(apikey!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    onSuccess: (_res, _vars, qc) => {
+      qc.invalidateQueries({ queryKey: ["recipes"] });
       toast("Recipe deleted");
       navigate("/recipes");
     },
+    errorToast: "Couldn't delete recipe",
   });
 
-  const copyMutation = useMutation({
+  const copyMutation = useOptimisticMutation({
     mutationFn: () => copyRecipe(collectionApikey!, apikey!),
-    onSuccess: () => {
+    onSuccess: (_res, _vars, qc) => {
       setCopied(true);
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      qc.invalidateQueries({ queryKey: ["recipes"] });
       toast("Copied to your recipes");
       setTimeout(() => setCopied(false), 3000);
     },
+    errorToast: "Couldn't copy recipe",
   });
 
   const queryKey = ["recipe", apikey, collectionApikey] as const;
 
-  const rateMutation = useMutation({
+  const rateMutation = useOptimisticMutation({
     mutationFn: (score: number | null) =>
       score === null ? deleteRating(apikey!) : upsertRating(apikey!, score),
-    onMutate: (score) => {
-      queryClient.setQueryData(
+    onOptimisticUpdate: (score, qc) => {
+      const prev = qc.getQueryData<{ data: typeof recipe } | undefined>(queryKey);
+      qc.setQueryData(
         queryKey,
         (old: { data: typeof recipe } | undefined) => {
           if (!old) return old;
@@ -107,9 +110,10 @@ export function RecipeDetail() {
           };
         }
       );
+      return () => qc.setQueryData(queryKey, prev);
     },
-    onSuccess: (res) => {
-      queryClient.setQueryData(
+    onSuccess: (res, _vars, qc) => {
+      qc.setQueryData(
         queryKey,
         (old: { data: typeof recipe } | undefined) => {
           if (!old) return old;
@@ -124,9 +128,10 @@ export function RecipeDetail() {
           };
         }
       );
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["smart-sections"] });
+      qc.invalidateQueries({ queryKey: ["recipes"] });
+      qc.invalidateQueries({ queryKey: ["smart-sections"] });
     },
+    errorToast: "Couldn't save rating",
   });
 
   function handleDelete() {

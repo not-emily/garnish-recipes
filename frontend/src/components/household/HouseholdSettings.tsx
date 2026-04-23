@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { X, Plus } from "lucide-react";
 import { updateHousehold } from "@/api/households";
 import { useHousehold } from "@/contexts/HouseholdContext";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 export function HouseholdSettings() {
   const { household, setHousehold } = useHousehold();
@@ -48,8 +48,7 @@ export function HouseholdSettings() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError?.error?.message || "Something went wrong");
+      setError(isApiError(err) ? err.message : "Something went wrong");
     } finally {
       setIsSaving(false);
     }

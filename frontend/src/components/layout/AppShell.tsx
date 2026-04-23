@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, ArrowDown } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { OfflineBanner } from "./OfflineBanner";
+import { ConnectionIndicator } from "./ConnectionIndicator";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 export function AppShell() {
@@ -19,6 +20,7 @@ export function AppShell() {
         Skip to content
       </a>
       <OfflineBanner />
+      <ConnectionIndicator />
 
       {/* Pull-to-refresh indicator */}
       <AnimatePresence>

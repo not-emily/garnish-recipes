@@ -45,7 +45,12 @@ export interface ApiResponse<T> {
   };
 }
 
-export interface ApiError {
+/**
+ * Shape of an error response body from the API. The actual thrown error is
+ * an `ApiError` class exported from `@/api/client` — import that if you need
+ * to catch/classify errors in components.
+ */
+export interface ApiErrorBody {
   error: {
     code: string;
     message: string;

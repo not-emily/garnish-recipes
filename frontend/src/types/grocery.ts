@@ -68,6 +68,11 @@ export interface GroceryListItem {
     id: string;
     name: string;
   };
+  // Client-only flag: set to true while an optimistic mutation is in-flight.
+  // Components render pending items at reduced opacity so users can see their
+  // action hasn't confirmed yet. Cleared once the server response replaces
+  // the entry (or removed entirely on failure via rollback).
+  _pending?: boolean;
 }
 
 export interface IngredientMapping {

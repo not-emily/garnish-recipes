@@ -5,7 +5,7 @@ import { listRecipes, createRecipe } from "@/api/recipes";
 import type { MealSlot } from "@/types/mealPlan";
 import type { RecipeSummary, RecipeCategory, RecipeType } from "@/types/recipe";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 import { formatWeekdayLong, formatMonthDay } from "@/lib/weekUtils";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { calculateLeftovers } from "@/hooks/useLeftoverCalculation";
@@ -401,7 +401,7 @@ function QuickMealCreateForm({
     },
   });
 
-  const err = mutation.error ? (mutation.error as unknown as ApiError).error?.message : null;
+  const err = isApiError(mutation.error) ? mutation.error.message : null;
 
   return (
     <form
@@ -606,7 +606,7 @@ function EventCreateForm({
     },
   });
 
-  const err = mutation.error ? (mutation.error as unknown as ApiError).error?.message : null;
+  const err = isApiError(mutation.error) ? mutation.error.message : null;
 
   return (
     <form

@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { api, setAccessToken, setSessionExpiredHandler } from "@/api/client";
+import { api, setAccessToken, setSessionExpiredHandler, isApiError } from "@/api/client";
 import { resetConsumer } from "@/lib/cable";
 import type { User, ApiResponse } from "@/types";
 
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (restoreStarted.current) return;
     restoreStarted.current = true;
 
-    async function restoreSession() {
+    async function restoreSession(attempt = 0) {
       try {
         const res = await api<ApiResponse<{ user: User; access_token: string }>>(
           "/auth/refresh",
@@ -50,9 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         setAccessToken(res.data.access_token);
         setUser(res.data.user);
-      } catch {
-        // No valid session, that's fine
-      } finally {
+        setIsLoading(false);
+      } catch (err) {
+        // Only a real auth/client failure means "no valid session" — treating
+        // a transient server hiccup that way was the "random logout" bug.
+        // For transient/offline errors, retry a few times before giving up;
+        // once we stop retrying, leave the user unauthenticated so the login
+        // screen renders (they can sign in manually when the server recovers).
+        if (isApiError(err) && err.category === "transient" && attempt < 3) {
+          const delay = Math.min(1000 * 2 ** attempt, 8000);
+          setTimeout(() => restoreSession(attempt + 1), delay);
+          return;
+        }
         setIsLoading(false);
       }
     }

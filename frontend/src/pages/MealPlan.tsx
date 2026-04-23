@@ -8,7 +8,7 @@ import { EntryPicker } from "@/components/meal-plan/EntryPicker";
 import { EntryOptions } from "@/components/meal-plan/EntryOptions";
 import { LeftoverTray } from "@/components/meal-plan/LeftoverTray";
 import { CascadeDeleteDialog } from "@/components/meal-plan/CascadeDeleteDialog";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { MealPlanEntry, MealSlot } from "@/types/mealPlan";
 import {
@@ -117,9 +117,8 @@ export function MealPlan() {
           // 409 with dependents → open the cascade dialog. Everything else
           // bubbles up as a generic mutation error (no toast yet; future
           // work).
-          const apiError = err as unknown as ApiError;
-          if (apiError?.error?.code === "has_dependents") {
-            const details = apiError.error.details as unknown as {
+          if (isApiError(err) && err.code === "has_dependents") {
+            const details = err.details as unknown as {
               linked_leftover_count: number;
               tray_item_count: number;
             };

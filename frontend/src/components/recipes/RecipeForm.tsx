@@ -11,7 +11,7 @@ import type {
   IngredientGroup,
   InstructionStep,
 } from "@/types/recipe";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 interface RecipeFormProps {
   recipeType: RecipeType;
@@ -108,8 +108,7 @@ export function RecipeForm({
     try {
       await onSubmit(input);
     } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr?.error?.message || "Couldn't save the recipe");
+      setError(isApiError(err) ? err.message : "Couldn't save the recipe");
       setIsSubmitting(false);
     }
   }

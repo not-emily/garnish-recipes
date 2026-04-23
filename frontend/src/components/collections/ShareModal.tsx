@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, Trash2, Loader2, Send } from "lucide-react";
 import { listShares, shareCollection, revokeShare } from "@/api/collections";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 interface ShareModalProps {
   open: boolean;
@@ -36,8 +36,7 @@ export function ShareModal({
       queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
     onError: (err) => {
-      const apiErr = err as unknown as ApiError;
-      setError(apiErr?.error?.message || "Couldn't share collection");
+      setError(isApiError(err) ? err.message : "Couldn't share collection");
     },
   });
 

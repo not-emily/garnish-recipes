@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/contexts/AuthContext";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 export function Login() {
   const { login } = useAuth();
@@ -20,8 +20,7 @@ export function Login() {
       await login(email, password);
       navigate("/recipes");
     } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError?.error?.message || "Something went wrong");
+      setError(isApiError(err) ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
     }

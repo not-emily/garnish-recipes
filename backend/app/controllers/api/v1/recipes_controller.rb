@@ -205,15 +205,19 @@ module Api
         when "title"
           scope.order(title: :asc)
         when "recently_cooked"
-          scope.order(last_cooked_at: :desc, updated_at: :desc)
+          # NULLS LAST + alphabetical tiebreak: cooked recipes lead (newest cook
+          # first), never-cooked recipes fall to the bottom sorted by title.
+          # The previous updated_at tiebreaker pushed freshly-imported-but-
+          # never-cooked recipes to the top, which read as "recently edited".
+          scope.order(Arel.sql("last_cooked_at DESC NULLS LAST, title ASC"))
         when "prep_time"
           scope.order(Arel.sql("total_time_minutes ASC NULLS LAST"))
         when "rating"
-          scope.order(average_rating: :desc, updated_at: :desc)
+          scope.order(Arel.sql("average_rating DESC NULLS LAST, title ASC"))
         when "updated_at"
           scope.order(updated_at: :desc)
         else
-          scope.order(last_cooked_at: :desc, updated_at: :desc)
+          scope.order(Arel.sql("last_cooked_at DESC NULLS LAST, title ASC"))
         end
       end
 

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { Link2, X, Loader2, FileText, Upload } from "lucide-react";
 import { createUrlImport, createFileImport } from "@/api/imports";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 
 interface ImportModalProps {
   open: boolean;
@@ -73,12 +73,8 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
 
   const pending = urlMutation.isPending || fileMutation.isPending;
   const errorMessage =
-    (urlMutation.error
-      ? (urlMutation.error as unknown as ApiError).error?.message
-      : null) ??
-    (fileMutation.error
-      ? (fileMutation.error as unknown as ApiError).error?.message
-      : null);
+    (isApiError(urlMutation.error) ? urlMutation.error.message : null) ??
+    (isApiError(fileMutation.error) ? fileMutation.error.message : null);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">

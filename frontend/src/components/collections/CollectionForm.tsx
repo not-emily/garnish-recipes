@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { X } from "lucide-react";
-import type { ApiError } from "@/types";
+import { isApiError } from "@/api/client";
 import type { CollectionInput } from "@/types/collection";
 
 interface CollectionFormProps {
@@ -48,8 +48,7 @@ export function CollectionForm({ open, onClose, onSubmit, initial, title }: Coll
       });
       onClose();
     } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr?.error?.message || "Couldn't save collection");
+      setError(isApiError(err) ? err.message : "Couldn't save collection");
     } finally {
       setIsSubmitting(false);
     }

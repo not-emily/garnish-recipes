@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   RefreshCw,
   Plus,
@@ -19,6 +19,7 @@ import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
 import { SwipeableGroceryItem } from "@/components/grocery/SwipeableGroceryItem";
+import { MutationButton } from "@/components/ui/MutationButton";
 import { todayIso, addDays, formatMonthDay } from "@/lib/weekUtils";
 
 export function GroceryList() {
@@ -219,9 +220,7 @@ export function GroceryList() {
         <AddItemForm
           stores={stores}
           mappings={groceryList?.mappings ?? []}
-          onSubmit={(input) => {
-            addItem.mutate(input, { onSuccess: () => setShowAddForm(false) });
-          }}
+          onSubmit={(input) => addItem.mutateAsync(input)}
           onCancel={() => setShowAddForm(false)}
           isPending={addItem.isPending}
         />
@@ -317,7 +316,9 @@ export function GroceryList() {
                   {checked.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2"
+                      className={`flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 ${
+                        item._pending ? "opacity-60" : ""
+                      }`}
                     >
                       {canEdit ? (
                         <button
@@ -411,7 +412,11 @@ function GroceryItemRow({
     .map((s) => s.title);
 
   return (
-    <li className="group flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-100 transition-shadow hover:shadow-sm">
+    <li
+      className={`group flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-100 transition-shadow hover:shadow-sm ${
+        item._pending ? "opacity-60" : ""
+      }`}
+    >
       {canEdit ? (
         <button
           type="button"
@@ -419,7 +424,8 @@ function GroceryItemRow({
             e.stopPropagation();
             onCheck();
           }}
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-300 text-transparent hover:border-garnish-400 hover:bg-garnish-50"
+          disabled={item._pending}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-300 text-transparent hover:border-garnish-400 hover:bg-garnish-50 disabled:cursor-not-allowed"
           aria-label={`Check off ${item.name}`}
         >
           <Check className="h-3 w-3" />
@@ -589,7 +595,7 @@ function AddItemForm({
     unit?: string;
     category?: GroceryCategory;
     store?: string;
-  }) => void;
+  }) => Promise<unknown>;
   onCancel: () => void;
   isPending: boolean;
 }) {
@@ -600,6 +606,32 @@ function AddItemForm({
   const [categoryManual, setCategoryManual] = useState(false);
   const [store, setStore] = useState("");
   const [storeManual, setStoreManual] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleSubmit() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await onSubmit({
+        name: trimmed,
+        quantity: quantity.trim() ? Number(quantity) : undefined,
+        unit: unit.trim() || undefined,
+        category,
+        store: store || undefined,
+      });
+      // Success: clear the entry fields for rapid batch-adding. Category and
+      // store persist — people typically add several items in the same area.
+      // Error path falls through (toast is shown by useOptimisticMutation;
+      // inputs stay filled so the user can retry).
+      setName("");
+      setQuantity("");
+      setUnit("");
+      setCategoryManual(false);
+      nameInputRef.current?.focus();
+    } catch {
+      // swallow — error toast handled by the mutation helper
+    }
+  }
 
   function handleNameChange(value: string) {
     setName(value);
@@ -620,9 +652,16 @@ function AddItemForm({
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">Item name</label>
           <input
+            ref={nameInputRef}
             type="text"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
             placeholder="e.g. Paper towels, Almond milk"
             autoFocus
             className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500"
@@ -697,26 +736,16 @@ function AddItemForm({
           disabled={isPending}
           className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60"
         >
-          Cancel
+          Done
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (!name.trim()) return;
-            onSubmit({
-              name: name.trim(),
-              quantity: quantity.trim() ? Number(quantity) : undefined,
-              unit: unit.trim() || undefined,
-              category,
-              store: store || undefined,
-            });
-          }}
-          disabled={isPending || !name.trim()}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-garnish-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-garnish-700 disabled:opacity-60"
+        <MutationButton
+          pending={isPending}
+          disabled={!name.trim()}
+          onClick={handleSubmit}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-garnish-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-garnish-700"
         >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           Add
-        </button>
+        </MutationButton>
       </div>
     </div>
   );
