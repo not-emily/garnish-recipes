@@ -5,6 +5,10 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      # Structured health check — subsystems (DB, GoodJob, Cable, Puma) plus
+      # memory. Unauthenticated so external monitors can ping it.
+      get "health", to: "health#show"
+
       # Auth
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
