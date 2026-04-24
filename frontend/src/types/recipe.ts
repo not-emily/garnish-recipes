@@ -157,6 +157,6 @@ export interface RecipeFilters {
   difficulty?: Difficulty;
   tags?: string[];
   max_time?: number;
-  sort?: "title" | "recently_cooked" | "prep_time" | "updated_at";
+  sort?: "title" | "recently_cooked" | "prep_time" | "updated_at" | "my_rating";
   limit?: number;
 }

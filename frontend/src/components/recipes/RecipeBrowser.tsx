@@ -28,9 +28,8 @@ export function RecipeBrowser() {
         filterState.recipeType === "all"
           ? undefined
           : filterState.recipeType,
-      // "rating" is a client-side sort (see below); send everything else
-      // explicitly so we don't depend on the backend's default being a
-      // specific value.
+      // "rating" (household average) is still client-side; "my_rating" is
+      // server-side because the backend has the per-user rating join.
       sort: filterState.sort === "rating" ? undefined : filterState.sort,
       difficulty: filterState.difficulty || undefined,
       max_time: filterState.maxTime || undefined,
@@ -224,6 +223,7 @@ export function RecipeBrowser() {
         recently_cooked: "Sort: Recently Cooked",
         prep_time: "Sort: Prep Time",
         rating: "Sort: Rating",
+        my_rating: "Sort: My Rating",
       };
       chips.push({
         key: "sort",

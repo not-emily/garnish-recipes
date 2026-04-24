@@ -1,21 +1,24 @@
 # Project Progress - Garnish
 
 ## Plan Files
-Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-4.md](../docs/plan/phases/phase-4.md)
+Roadmap: None
+Current Phase: None
 Latest Weekly Report: [weekly-2026-W16.md](../docs/reports/weekly-2026-W16.md)
 Latest Daily Report: [daily-2026-04-13.md](../docs/reports/daily-2026-04-13.md)
+
+Previously: [_archived/v3-post-mvp-1](../docs/plan/_archived/v3-post-mvp-1/) — Stabilization, Polish & Sharing (4 phases, shipped 2026-04-22 → 2026-04-24)
 
 Last Updated: 2026-04-24
 
 
 ## Current Focus
-**Phases 1, 2, 3, 4A, and 4C shipped.** Frontend resilience + backend tuning + UX polish + cook-tracking + recipe sharing are all landed. Next: Phase 4B (my-favorites / not-rated filters + my-rating sort) — the last sub-phase of Phase 4.
+**Plan complete — all four phases shipped (1, 2, 3, 4A, 4B, 4C).** Stabilization, polish, sharing, and cook-tracking all landed across 2026-04-22 through 2026-04-24. No active phase. Next session should pick from the backlog or address the open follow-ups below.
 
 ## Active Tasks
-- [NEXT] Phase 4B: "My favorites" / "Not rated by me" filter chips + "My rating" sort option (backend params + frontend `RecipeFilterPanel` wiring)
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
+- [NEXT] Follow-up: store auto-assign on manual-add — `GroceryListsController#add_item` doesn't consult `IngredientCategoryMapping`. ~5-line fix to lookup the mapping before save
+- [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
 
 ## Open Questions/Blockers
 - **Mobile cross-week swipe**: Swiping past Sunday/Monday on mobile single-day view doesn't advance the week. Desktop week nav buttons work. → **Addressed in Phase 3**.
@@ -43,6 +46,10 @@ Last Updated: 2026-04-24
   - 3C (filter + scroll persistence): `useRecipeFilters` stores state in localStorage under `garnish:recipeFilters:v1` with runtime sanitization; sticky until manual "Clear all" (no time-based expiry, no URL sync). Initial URL-param approach (2026-04-22) was reverted on 2026-04-24 — in a PWA, back-nav is in-app React Router and frequently uses hard-coded `Link to="/recipes"` instead of `navigate(-1)`, so URL-backed state was being dropped on back-nav. localStorage also survives tab close, matching the mental model of "filters are a setting, not a query." `useScrollRestoration` unchanged: saves scroll position on unmount, restores on POP with multi-attempt timing.
   - 3D (iOS zoom): `font-size: 16px !important` on inputs/textareas/selects — many inputs carry Tailwind's `text-sm` (14px) which was winning on class-vs-element specificity. `!important` is justified because sub-16px inputs cause mandatory iOS zoom, which is a platform constraint, not a style choice. **Real-device verification still pending.**
   - 3E (store/category categorization): Root cause was plural mismatch in client-side `categorizeIngredient` — keyword "paper towel" didn't match "paper towels" due to word-boundary regex. Regex now accepts optional `s|es` suffix. **Note:** this fix is for the keyword-based category inference system (Produce/Dairy/etc). The *separate* learned-mapping system (`IngredientCategoryMapping`, which remembers per-household "eggs → Sam's Club") is not applied in the manual-add path (`GroceryListsController#add_item`) — only during meal-plan-to-grocery generation. That's why store auto-assignment works sometimes (generated items) and not others (manually added items). Documented as an Open Question for Phase 4 or backlog.
+- Phase 4B: Personal-rating sort (2026-04-24)
+  - Backend: `sort=my_rating` case in `RecipesController#sort_scope` — LEFT JOIN restricted to current user's `recipe_ratings` (user_id parameter-bound via `connection.quote()`), ordered `score DESC NULLS LAST, recipes.title ASC`. Two tests cover ordering correctness and per-user isolation (one user's ratings don't leak into another's view).
+  - Frontend: "My Rating" added to the sort dropdown in `RecipeFilterPanel`. Active sort chip ("Sort: My Rating") rendered in `RecipeBrowser` when applied. Persisted via `useRecipeFilters` like the other sorts.
+  - **Deviation from phase-4.md plan:** plan called for both filter chips ("My Favorites" / "Not Rated by Me") AND a "My Rating" sort. After implementing both, scrapped the chip group during review — the sort already surfaces favorites at the top and unrated at the bottom (NULLS LAST), which covers the workflows for a personal-scale recipe library. Removed `MyRatingFilter` type, `MY_RATING_FILTERS` const, "My Ratings" filter section, `myRating` from `RecipeFilterState`, the `myRating` chip rendering in `RecipeBrowser`, the `?my_rating=favorites|unrated` query param, the `Recipe.my_rating_favorites` / `my_rating_unrated` scopes, and the two filter tests. The "Highly Rated" smart filter (household average) covers the household-shared favorites case; sort-by-my-rating covers the personal case. Net: less surface, same workflows.
 - Phase 4A: Link-based recipe sharing (2026-04-24)
   - Backend: `share_token` column on recipes (partial unique index where not null); `Recipe#generate_share_token!` (collision-avoiding loop) and `#revoke_share_token!`. `RecipePolicy#share?` / `#revoke_share?` mirror update/destroy authority — admin+ only.
   - `RecipesController#share` and `#unshare` (POST/DELETE `/api/v1/recipes/:apikey/share`) — share is idempotent (existing token returned unchanged); revoke nulls and the next share generates a fresh token so old URLs 404.

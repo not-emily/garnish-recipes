@@ -240,6 +240,16 @@ module Api
           scope.order(Arel.sql("total_time_minutes ASC NULLS LAST"))
         when "rating"
           scope.order(Arel.sql("average_rating DESC NULLS LAST, title ASC"))
+        when "my_rating"
+          # LEFT JOIN restricted to current user's ratings; recipes the user
+          # hasn't rated land at the bottom (NULLS LAST), tie-broken by
+          # title. The user_id is parameter-bound through quote(); using
+          # interpolation directly would be SQL-injectable in principle.
+          quoted_uid = ActiveRecord::Base.connection.quote(current_user.id)
+          scope.joins(
+            "LEFT JOIN recipe_ratings ON recipe_ratings.recipe_id = recipes.id " \
+            "AND recipe_ratings.user_id = #{quoted_uid}"
+          ).order(Arel.sql("recipe_ratings.score DESC NULLS LAST, recipes.title ASC"))
         when "updated_at"
           scope.order(updated_at: :desc)
         else

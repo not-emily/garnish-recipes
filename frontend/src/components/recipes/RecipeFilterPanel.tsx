@@ -15,7 +15,8 @@ export type RecipeSortOption =
   | "title"
   | "recently_cooked"
   | "prep_time"
-  | "rating";
+  | "rating"
+  | "my_rating";
 
 export interface RecipeFilterState {
   recipeType: "all" | "full" | "quick_meal";
@@ -59,6 +60,7 @@ const SORT_OPTIONS: { value: RecipeSortOption; label: string }[] = [
   { value: "title", label: "Title" },
   { value: "prep_time", label: "Prep Time" },
   { value: "rating", label: "Rating" },
+  { value: "my_rating", label: "My Rating" },
 ];
 
 const TYPE_OPTIONS: { value: "all" | "full" | "quick_meal"; label: string }[] = [

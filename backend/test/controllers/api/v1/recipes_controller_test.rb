@@ -399,6 +399,67 @@ module Api
         assert_nil body["share_token"]
         assert_nil body["share_url"]
       end
+
+      # --- my_rating sort ---
+
+      test "sort=my_rating orders by current user's score desc, NULLS LAST, title asc" do
+        rated_high = @household.recipes.create!(
+          contributed_by: @owner, recipe_type: "full", title: "Aaa", category: "entree",
+          servings: 4,
+          ingredient_groups: [{ "ingredients" => [{ "name" => "x" }] }],
+          instructions: [{ "step" => 1, "text" => "Cook" }]
+        )
+        rated_low = @household.recipes.create!(
+          contributed_by: @owner, recipe_type: "full", title: "Bbb", category: "entree",
+          servings: 4,
+          ingredient_groups: [{ "ingredients" => [{ "name" => "y" }] }],
+          instructions: [{ "step" => 1, "text" => "Cook" }]
+        )
+        unrated = @household.recipes.create!(
+          contributed_by: @owner, recipe_type: "full", title: "Ccc", category: "entree",
+          servings: 4,
+          ingredient_groups: [{ "ingredients" => [{ "name" => "z" }] }],
+          instructions: [{ "step" => 1, "text" => "Cook" }]
+        )
+        RecipeRating.create!(recipe: rated_high, user: @owner, score: 5)
+        RecipeRating.create!(recipe: rated_low, user: @owner, score: 2)
+
+        get "/api/v1/recipes?sort=my_rating",
+            headers: auth_headers(@owner), as: :json
+
+        titles = JSON.parse(response.body)["data"].map { |r| r["title"] }
+        # rated_high (5) first, rated_low (2) second; @recipe and unrated
+        # both NULL, ordered alphabetically by title (Beef Stew, Ccc).
+        assert_equal "Aaa", titles.first
+        assert_equal "Bbb", titles[1]
+        # Unrated tail in title order
+        unrated_titles = titles[2..]
+        assert_equal unrated_titles.sort, unrated_titles
+      end
+
+      test "sort=my_rating uses each user's own rating, not someone else's" do
+        rated_by_member_only = @household.recipes.create!(
+          contributed_by: @owner, recipe_type: "full", title: "Aaa", category: "entree",
+          servings: 4,
+          ingredient_groups: [{ "ingredients" => [{ "name" => "x" }] }],
+          instructions: [{ "step" => 1, "text" => "Cook" }]
+        )
+        rated_by_owner = @household.recipes.create!(
+          contributed_by: @owner, recipe_type: "full", title: "Bbb", category: "entree",
+          servings: 4,
+          ingredient_groups: [{ "ingredients" => [{ "name" => "y" }] }],
+          instructions: [{ "step" => 1, "text" => "Cook" }]
+        )
+        RecipeRating.create!(recipe: rated_by_member_only, user: @member, score: 5)
+        RecipeRating.create!(recipe: rated_by_owner, user: @owner, score: 3)
+
+        get "/api/v1/recipes?sort=my_rating",
+            headers: auth_headers(@owner), as: :json
+
+        titles = JSON.parse(response.body)["data"].map { |r| r["title"] }
+        # Owner: rated_by_owner (3) first, then NULLs alphabetically
+        assert_equal "Bbb", titles.first
+      end
     end
   end
 end

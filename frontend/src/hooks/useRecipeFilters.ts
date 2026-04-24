@@ -31,6 +31,7 @@ const SORT_VALUES = new Set<RecipeSortOption>([
   "recently_cooked",
   "prep_time",
   "rating",
+  "my_rating",
 ]);
 
 const TYPE_VALUES = new Set<RecipeFilterState["recipeType"]>([
