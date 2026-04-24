@@ -16,6 +16,7 @@ import {
   CalendarPlus,
   Copy,
   Check,
+  Share2,
 } from "lucide-react";
 import { getRecipe, deleteRecipe } from "@/api/recipes";
 import { copyRecipe } from "@/api/collections";
@@ -26,6 +27,7 @@ import { ImportProgress } from "@/components/recipes/ImportProgress";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddToCollectionModal } from "@/components/collections/AddToCollectionModal";
 import { AddToMealPlanModal } from "@/components/meal-plan/AddToMealPlanModal";
+import { ShareRecipeDialog } from "@/components/recipes/ShareRecipeDialog";
 import { RatingStars } from "@/components/recipes/RatingStars";
 import { upsertRating, deleteRating } from "@/api/ratings";
 import { formatRelativeDate } from "@/lib/weekUtils";
@@ -41,6 +43,7 @@ export function RecipeDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [mealPlanModalOpen, setMealPlanModalOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const canEdit =
     household?.my_role === "owner" || household?.my_role === "admin";
@@ -275,6 +278,16 @@ export function RecipeDetail() {
             </button>
             {canEdit && (
               <>
+                <button
+                  type="button"
+                  onClick={() => setShareDialogOpen(true)}
+                  className={`rounded-md p-2 hover:bg-gray-100 ${
+                    recipe.share_token ? "text-garnish-600" : "text-gray-500"
+                  }`}
+                  aria-label={recipe.share_token ? "Sharing on — manage link" : "Share recipe"}
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
                 <Link
                   to={`/recipes/${recipe.id}/edit`}
                   className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
@@ -541,6 +554,13 @@ export function RecipeDetail() {
         open={collectionModalOpen}
         onClose={() => setCollectionModalOpen(false)}
         recipeApikey={recipe.id}
+      />
+
+      <ShareRecipeDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        recipeApikey={recipe.id}
+        currentShareUrl={recipe.share_url ?? null}
       />
 
       <ConfirmDialog

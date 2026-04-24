@@ -50,3 +50,54 @@ export function updateRecipe(apikey: string, input: Partial<RecipeInput>) {
 export function deleteRecipe(apikey: string) {
   return api<void>(`/recipes/${apikey}`, { method: "DELETE" });
 }
+
+// --- Sharing ---
+
+export interface ShareLink {
+  share_token: string;
+  share_url: string;
+}
+
+export interface SharedRecipeView {
+  id: string;
+  recipe_type: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  cuisine: string | null;
+  tags: string[];
+  primary_protein: string | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+  total_time_minutes: number | null;
+  difficulty: string | null;
+  servings: number | null;
+  image_url: string | null;
+  source_url: string | null;
+  notes: string | null;
+  ingredient_groups: unknown[];
+  instructions: unknown[];
+  shared_by_household: string;
+  can_copy: boolean;
+}
+
+export function shareRecipe(apikey: string) {
+  return api<ApiResponse<ShareLink>>(`/recipes/${apikey}/share`, {
+    method: "POST",
+  });
+}
+
+export function revokeShare(apikey: string) {
+  return api<void>(`/recipes/${apikey}/share`, { method: "DELETE" });
+}
+
+export function fetchSharedRecipe(token: string) {
+  return api<ApiResponse<SharedRecipeView>>(`/shared_recipes/${token}`);
+}
+
+export function copySharedRecipe(token: string) {
+  return api<ApiResponse<{ id: string; title: string }>>(
+    `/shared_recipes/${token}/copy`,
+    { method: "POST" }
+  );
+}

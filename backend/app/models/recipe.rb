@@ -66,6 +66,27 @@ class Recipe < ApplicationRecord
     where("total_time_minutes <= ?", minutes) if minutes.present?
   }
 
+  # --- Sharing ---
+  # share_token is nullable. When present, anyone holding the token can view
+  # the recipe via the public /api/v1/shared_recipes/:token route and (if
+  # authenticated) copy it into their active household. Revoking nulls the
+  # token; the next share generates a fresh one, so old URLs 404.
+
+  def generate_share_token!
+    return share_token if share_token.present?
+    loop do
+      candidate = SecureRandom.urlsafe_base64(24)
+      unless self.class.exists?(share_token: candidate)
+        update!(share_token: candidate)
+        return share_token
+      end
+    end
+  end
+
+  def revoke_share_token!
+    update!(share_token: nil)
+  end
+
   def self.find_by_apikey!(apikey)
     find_by!(apikey: apikey)
   end

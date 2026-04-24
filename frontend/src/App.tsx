@@ -24,6 +24,7 @@ const Collections = lazy(() => import("@/pages/Collections"));
 const CollectionDetail = lazy(() => import("@/pages/CollectionDetail"));
 const Search = lazy(() => import("@/pages/Search"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const SharedRecipe = lazy(() => import("@/pages/SharedRecipe"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,13 @@ function AppRoutes() {
       {/* Public routes */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+
+      {/* Shared recipe — public, but does not redirect logged-in users. They
+          get an "Add to my recipes" CTA instead. */}
+      <Route
+        path="/r/shared/:token"
+        element={<Suspense fallback={<LoadingScreen />}><SharedRecipe /></Suspense>}
+      />
 
       {/* Onboarding (authenticated, no household) */}
       <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />

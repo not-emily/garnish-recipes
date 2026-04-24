@@ -4,7 +4,7 @@ module Api
       before_action :authenticate!
       include HouseholdScoped
 
-      before_action :load_recipe, only: [:show, :update, :destroy, :collections]
+      before_action :load_recipe, only: [:show, :update, :destroy, :collections, :share, :unshare]
 
       # GET /api/v1/recipes
       def index
@@ -141,7 +141,33 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/recipes/:apikey/share
+      # Idempotent: returns the existing token if already shared, generates
+      # a new one if not. Response is the token plus a frontend-facing URL
+      # so the share dialog can copy-to-clipboard without reconstructing it.
+      def share
+        return unless authorize!(@recipe, :share?)
+        @recipe.generate_share_token!
+        render json: { data: share_payload(@recipe) }
+      end
+
+      # DELETE /api/v1/recipes/:apikey/share
+      # Nulls the token; any existing shared URLs immediately 404. The next
+      # call to `share` generates a fresh token — old and new are unlinked.
+      def unshare
+        return unless authorize!(@recipe, :revoke_share?)
+        @recipe.revoke_share_token!
+        head :no_content
+      end
+
       private
+
+      def share_payload(recipe)
+        {
+          share_token: recipe.share_token,
+          share_url: "#{ENV.fetch('FRONTEND_URL')}/r/shared/#{recipe.share_token}"
+        }
+      end
 
       def load_recipe
         @recipe = Current.household.recipes.find_by_apikey!(params[:apikey])
@@ -254,6 +280,9 @@ module Api
           import_source_type: recipe.import_source_type,
           import_error: recipe.import_error,
           my_rating: recipe.recipe_ratings.find_by(user: current_user)&.score,
+          share_token: recipe.share_token,
+          share_url: recipe.share_token.present? ?
+            "#{ENV.fetch('FRONTEND_URL')}/r/shared/#{recipe.share_token}" : nil,
           contributed_by: {
             id: recipe.contributed_by.apikey,
             name: recipe.contributed_by.name

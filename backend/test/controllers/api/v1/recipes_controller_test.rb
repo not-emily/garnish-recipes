@@ -311,6 +311,94 @@ module Api
         end
         assert_response :forbidden
       end
+
+      # --- share / unshare ---
+
+      test "owner can generate a share token" do
+        assert_nil @recipe.share_token
+
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@owner),
+             as: :json
+
+        assert_response :success
+        body = JSON.parse(response.body)["data"]
+        assert_not_nil body["share_token"]
+        assert_includes body["share_url"], "/r/shared/#{body['share_token']}"
+        assert_equal body["share_token"], @recipe.reload.share_token
+      end
+
+      test "share is idempotent — repeat returns the same token" do
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@owner), as: :json
+        first_token = JSON.parse(response.body)["data"]["share_token"]
+
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@owner), as: :json
+        second_token = JSON.parse(response.body)["data"]["share_token"]
+
+        assert_equal first_token, second_token
+      end
+
+      test "member without admin cannot share a recipe" do
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@member), as: :json
+
+        assert_response :forbidden
+        assert_nil @recipe.reload.share_token
+      end
+
+      test "outsider cannot share a recipe" do
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@outsider), as: :json
+
+        assert_response :precondition_required
+      end
+
+      test "owner can revoke a share token" do
+        @recipe.generate_share_token!
+
+        delete "/api/v1/recipes/#{@recipe.apikey}/share",
+               headers: auth_headers(@owner), as: :json
+
+        assert_response :no_content
+        assert_nil @recipe.reload.share_token
+      end
+
+      test "revoking then resharing produces a different token" do
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@owner), as: :json
+        first_token = JSON.parse(response.body)["data"]["share_token"]
+
+        delete "/api/v1/recipes/#{@recipe.apikey}/share",
+               headers: auth_headers(@owner), as: :json
+
+        post "/api/v1/recipes/#{@recipe.apikey}/share",
+             headers: auth_headers(@owner), as: :json
+        second_token = JSON.parse(response.body)["data"]["share_token"]
+
+        assert_not_equal first_token, second_token
+      end
+
+      test "share_token and share_url appear in recipe show response" do
+        @recipe.generate_share_token!
+
+        get "/api/v1/recipes/#{@recipe.apikey}",
+            headers: auth_headers(@owner), as: :json
+
+        body = JSON.parse(response.body)["data"]
+        assert_equal @recipe.share_token, body["share_token"]
+        assert_includes body["share_url"], @recipe.share_token
+      end
+
+      test "share_url is nil when recipe is not shared" do
+        get "/api/v1/recipes/#{@recipe.apikey}",
+            headers: auth_headers(@owner), as: :json
+
+        body = JSON.parse(response.body)["data"]
+        assert_nil body["share_token"]
+        assert_nil body["share_url"]
+      end
     end
   end
 end

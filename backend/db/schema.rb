@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_24_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_24_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -313,6 +313,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_24_100000) do
     t.integer "rating_count", default: 0, null: false
     t.string "recipe_type", default: "full", null: false
     t.integer "servings"
+    t.string "share_token"
     t.string "source_url"
     t.string "tags", default: [], null: false, array: true
     t.integer "times_cooked", default: 0, null: false
@@ -328,6 +329,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_24_100000) do
     t.index ["last_cooked_at"], name: "index_recipes_on_last_cooked_at"
     t.index ["primary_protein"], name: "index_recipes_on_primary_protein"
     t.index ["recipe_type"], name: "index_recipes_on_recipe_type"
+    t.index ["share_token"], name: "index_recipes_on_share_token", unique: true, where: "(share_token IS NOT NULL)"
     t.index ["tags"], name: "index_recipes_on_tags", using: :gin
   end
 

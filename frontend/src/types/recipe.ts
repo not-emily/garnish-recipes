@@ -107,6 +107,8 @@ export interface Recipe extends RecipeSummary {
   import_status?: ImportStatus | null;
   import_source_type?: ImportSourceType | null;
   import_error?: string | null;
+  share_token?: string | null;
+  share_url?: string | null;
 }
 
 export interface ImportSummary {

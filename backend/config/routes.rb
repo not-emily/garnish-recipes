@@ -39,6 +39,12 @@ Rails.application.routes.draw do
       post   "recipes/:apikey/ratings",     to: "ratings#upsert"
       delete "recipes/:apikey/ratings",     to: "ratings#destroy"
       get    "recipes/:apikey/collections", to: "recipes#collections"
+      post   "recipes/:apikey/share",       to: "recipes#share"
+      delete "recipes/:apikey/share",       to: "recipes#unshare"
+
+      # Recipe share links — public read + authenticated copy
+      get    "shared_recipes/:token",       to: "shared_recipes#show"
+      post   "shared_recipes/:token/copy",  to: "shared_recipes#copy"
 
       # Recipe imports
       post "imports", to: "imports#create"

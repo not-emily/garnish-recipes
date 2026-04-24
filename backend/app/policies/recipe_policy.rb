@@ -31,6 +31,19 @@ class RecipePolicy
     membership.can_manage_members? ? allow : deny(:not_admin)
   end
 
+  # Generating/revoking a share link is treated like mutating the recipe —
+  # admin+ only. A share link is functionally a grant of read+copy to
+  # anyone with the URL, so it should live at the same authority level as
+  # editing or deleting the recipe itself.
+  def share?
+    return deny(:not_member) unless in_household? && recipe_in_household?
+    membership.can_manage_members? ? allow : deny(:not_admin)
+  end
+
+  def revoke_share?
+    share?
+  end
+
   # Scope: which recipes can the current member see?
   # Members can see all recipes in their active household. There is no
   # per-recipe visibility — the household is the boundary.
