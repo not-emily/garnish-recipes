@@ -28,6 +28,7 @@ import { AddToCollectionModal } from "@/components/collections/AddToCollectionMo
 import { AddToMealPlanModal } from "@/components/meal-plan/AddToMealPlanModal";
 import { RatingStars } from "@/components/recipes/RatingStars";
 import { upsertRating, deleteRating } from "@/api/ratings";
+import { formatRelativeDate } from "@/lib/weekUtils";
 import { useOptimisticMutation } from "@/lib/useOptimisticMutation";
 
 export function RecipeDetail() {
@@ -352,6 +353,11 @@ export function RecipeDetail() {
           <p className="mt-1 text-sm text-gray-600">{recipe.description}</p>
         )}
 
+        <CookStats
+          lastCookedAt={recipe.last_cooked_at ?? null}
+          timesCooked={recipe.times_cooked ?? 0}
+        />
+
         {/* Meta row */}
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-500">
           {recipe.total_time_minutes && (
@@ -549,6 +555,27 @@ export function RecipeDetail() {
       />
     </div>
   );
+}
+
+// Ambient cook-tracking line next to the recipe title. Hidden when there's
+// nothing to say (never cooked, no data). Positioned subtly on purpose —
+// this is a "by the way" signal, not a headline.
+function CookStats({
+  lastCookedAt,
+  timesCooked,
+}: {
+  lastCookedAt: string | null;
+  timesCooked: number;
+}) {
+  if (!lastCookedAt && timesCooked === 0) return null;
+
+  const parts: string[] = [];
+  if (lastCookedAt) parts.push(`Last made ${formatRelativeDate(lastCookedAt)}`);
+  if (timesCooked > 0) {
+    parts.push(`Made ${timesCooked} ${timesCooked === 1 ? "time" : "times"}`);
+  }
+
+  return <p className="mt-1 text-xs text-gray-400">{parts.join(" · ")}</p>;
 }
 
 function BackButton({

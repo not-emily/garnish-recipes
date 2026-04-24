@@ -68,6 +68,30 @@ export function formatWeekdayShort(isoDate: string): string {
   return parseIsoDate(isoDate).toLocaleDateString(undefined, { weekday: "short" });
 }
 
+// Relative past-date phrase: "today", "yesterday", "3 days ago", "2 weeks
+// ago", "last month", "3 months ago", "last year", "2 years ago". Designed
+// for subtle, ambient UI — approximate wording is the whole point. Future
+// dates fall through to a short absolute format so the function stays safe
+// for any input.
+export function formatRelativeDate(isoDate: string): string {
+  const now = new Date();
+  const then = parseIsoDate(isoDate);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const thenStart = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const diffDays = Math.round((todayStart.getTime() - thenStart.getTime()) / DAY_MS);
+
+  if (diffDays < 0) return formatMonthDay(isoDate);
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return "last week";
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 60) return "last month";
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  if (diffDays < 730) return "last year";
+  return `${Math.floor(diffDays / 365)} years ago`;
+}
+
 // Format a week range: "Apr 6 – 12, 2026"
 export function formatWeekRange(weekStart: string): string {
   const start = parseIsoDate(weekStart);
