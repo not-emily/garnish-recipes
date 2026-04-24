@@ -20,9 +20,13 @@ body {
   overscroll-behavior: none;
 }
 
-/* Prevent iOS Safari from zooming on input focus (requires >= 16px) */
+/* Prevent iOS Safari from zooming on input focus (requires >= 16px).
+ * !important because many inputs carry Tailwind's `text-sm` (14px) which
+ * would otherwise win on class-vs-element specificity and re-introduce the
+ * zoom. We don't ever want sub-16px form inputs — it's a platform constraint,
+ * not a stylistic choice — so the escape hatch is explicit and safe. */
 input, textarea, select {
-  font-size: 16px;
+  font-size: 16px !important;
 }
 
 @supports (padding: env(safe-area-inset-top)) {

@@ -5,17 +5,19 @@ import { listRecipes, getSmartSections } from "@/api/recipes";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
 import type { RecipeFilters, RecipeCategory, RecipeType, RecipeSummary, SmartSections } from "@/types/recipe";
 import { RecipeCard } from "./RecipeCard";
+import { useRecipeFilters } from "@/hooks/useRecipeFilters";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import {
   RecipeFilterPanel,
   countActiveFilters,
   DEFAULT_FILTERS,
-  type RecipeFilterState,
   type SmartFilter,
 } from "./RecipeFilterPanel";
 
 export function RecipeBrowser() {
-  const [filterState, setFilterState] = useState<RecipeFilterState>(DEFAULT_FILTERS);
+  const [filterState, setFilterState] = useRecipeFilters();
   const [filterOpen, setFilterOpen] = useState(false);
+  useScrollRestoration("recipes-browse");
 
   // Build API filters from filter state. Multi-select protein/category/cuisine
   // are applied client-side when more than one is selected, since the backend
@@ -230,7 +232,7 @@ export function RecipeBrowser() {
       });
     }
     return chips;
-  }, [filterState]);
+  }, [filterState, setFilterState]);
 
   function clearAll() {
     setFilterState(DEFAULT_FILTERS);

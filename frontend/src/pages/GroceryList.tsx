@@ -18,6 +18,7 @@ import { addGroceryStore, renameGroceryStore, removeGroceryStore } from "@/api/g
 import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
+import { AnimatePresence } from "framer-motion";
 import { SwipeableGroceryItem } from "@/components/grocery/SwipeableGroceryItem";
 import { MutationButton } from "@/components/ui/MutationButton";
 import { todayIso, addDays, formatMonthDay } from "@/lib/weekUtils";
@@ -262,24 +263,26 @@ export function GroceryList() {
                   </span>
                 </h3>
                 <ul className="space-y-1">
-                  {categoryItems.map((item) => (
-                    <SwipeableGroceryItem
-                      key={item.id}
-                      enabled={canEdit}
-                      onSwipeCheck={() => checkItem.mutate(item.id)}
-                      onSwipeRemove={() => removeItem.mutate(item.id)}
-                    >
-                      <GroceryItemRow
-                        item={item}
-                        stores={stores}
-                        canEdit={canEdit}
-                        onCheck={() => checkItem.mutate(item.id)}
-                        onUpdate={(input) =>
-                          updateItem.mutate({ id: item.id, input })
-                        }
-                      />
-                    </SwipeableGroceryItem>
-                  ))}
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {categoryItems.map((item) => (
+                      <SwipeableGroceryItem
+                        key={item.id}
+                        enabled={canEdit}
+                        onSwipeCheck={() => checkItem.mutate(item.id)}
+                        onSwipeRemove={() => removeItem.mutate(item.id)}
+                      >
+                        <GroceryItemRow
+                          item={item}
+                          stores={stores}
+                          canEdit={canEdit}
+                          onCheck={() => checkItem.mutate(item.id)}
+                          onUpdate={(input) =>
+                            updateItem.mutate({ id: item.id, input })
+                          }
+                        />
+                      </SwipeableGroceryItem>
+                    ))}
+                  </AnimatePresence>
                 </ul>
               </div>
             );

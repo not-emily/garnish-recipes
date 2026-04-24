@@ -95,7 +95,12 @@ const SINGLE_KEYWORDS: [GroceryCategory, string[]][] = [
 ];
 
 function wordMatch(name: string, keyword: string): boolean {
-  const re = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+  // Allow an optional plural suffix so keyword "paper towel" matches
+  // "paper towels" and "potato" matches "potatoes". Without this, any plural
+  // form fell through to "other" — the most common way users type grocery
+  // items (apples, eggs, bananas, paper towels, etc.).
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\b${escaped}(?:es|s)?\\b`, "i");
   return re.test(name);
 }
 

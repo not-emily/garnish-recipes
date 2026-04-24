@@ -10,12 +10,12 @@ Garnish is a mobile-first meal planning app for households. It combines recipe m
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, React Router, Framer Motion
 - **Auth:** Custom user model + JWT (no Devise)
 - **LLM:** sage-rb (optional, user-provided API keys)
-- **Hosting:** Backend on MacBook Pro (native, no Docker) via Cloudflare Tunnel. Frontend on Cloudflare Pages.
+- **Hosting:** Backend on MacBook Pro (native, no Docker) via Cloudflare Tunnel. Frontend on Cloudflare Pages. Local dev on Arch Linux uses `docker-compose.yml` at the repo root to run Postgres (`docker compose up -d` → `garnish-pg` on host port 5433).
 - **CI/CD:** GitHub Actions + Tailscale SSH for backend deploy
 
 ## Key Patterns & Conventions
 - Monorepo: `backend/` for Rails, `frontend/` for React
-- No Docker — run native (Homebrew on macOS server, native on Arch Linux dev)
+- No Docker in production (Homebrew on the macOS server runs Rails + Postgres natively). On the Arch Linux dev box, Rails runs natively but Postgres runs in Docker via the root `docker-compose.yml` (host port 5433) — start it with `docker compose up -d` before `bin/rails server`.
 - All API endpoints scoped to user's active household via `HouseholdScoped` concern
 - Recipe ingredients/instructions stored as JSONB (not normalized tables)
 - Pundit for authorization (owner/admin/member roles)

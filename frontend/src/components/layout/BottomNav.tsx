@@ -57,9 +57,9 @@ export function BottomNav() {
     <LayoutGroup>
       <nav
         aria-label="Main navigation"
-        className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
+        className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]"
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2">
+        <div className="pointer-events-none mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           {shouldCollapse && activeItem ? (
             <CollapsedNav
               backIcon={activeItem.icon}
@@ -94,7 +94,7 @@ function FullNav({
     <>
       <motion.div
         layoutId="nav-pill"
-        className="flex items-center gap-1 rounded-full bg-gray-100/90 p-1 shadow-sm backdrop-blur-sm"
+        className="pointer-events-auto flex items-center gap-1 rounded-full bg-gray-100/90 p-1 shadow-sm backdrop-blur-sm"
         transition={springTransition}
       >
         {navItems.map((item) => {
@@ -106,7 +106,7 @@ function FullNav({
               to={item.to}
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full"
             >
               {isActive && (
                 <motion.div
@@ -132,10 +132,11 @@ function FullNav({
           to="/search"
           state={{ from: pathname }}
           aria-label="Search"
+          className="pointer-events-auto"
         >
           <motion.div
             layoutId="nav-search"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
             transition={springTransition}
           >
             <Search className="h-5 w-5 text-gray-500" />
@@ -164,7 +165,7 @@ function CollapsedNav({
         onClick={onBack}
         aria-label={`Back to ${backLabel}`}
         layoutId="nav-pill"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
+        className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm"
         transition={springTransition}
       >
         <BackIcon className="h-5 w-5 text-garnish-600" />
@@ -189,7 +190,7 @@ function SearchBar() {
   return (
     <motion.div
       layoutId="nav-search"
-      className="relative flex min-w-0 flex-1 items-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm md:max-w-sm"
+      className="pointer-events-auto relative flex min-w-0 flex-1 items-center rounded-full bg-gray-100/90 shadow-sm backdrop-blur-sm md:max-w-sm"
       transition={springTransition}
     >
       <form role="search" className="flex flex-1 items-center" onSubmit={(e) => e.preventDefault()}>
