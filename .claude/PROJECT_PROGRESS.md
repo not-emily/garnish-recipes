@@ -4,7 +4,7 @@
 Roadmap: None
 Current Phase: None
 Latest Weekly Report: [weekly-2026-W16.md](../docs/reports/weekly-2026-W16.md)
-Latest Daily Report: [daily-2026-04-13.md](../docs/reports/daily-2026-04-13.md)
+Latest Daily Report: [daily-2026-04-24.md](../docs/reports/daily-2026-04-24.md)
 
 Previously: [_archived/v3-post-mvp-1](../docs/plan/_archived/v3-post-mvp-1/) — Stabilization, Polish & Sharing (4 phases, shipped 2026-04-22 → 2026-04-24)
 
