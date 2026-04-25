@@ -11,10 +11,17 @@ let lastReportedOpen: boolean | null = null;
 
 // ActionCable's Consumer doesn't expose connect/disconnect events publicly,
 // so poll isOpen() once a second and report changes. Cheap and reliable.
+//
+// `consumer.connection.isOpen()` is part of the runtime API but not the
+// published TypeScript surface of @rails/actioncable. The cast keeps the
+// runtime behavior we want without disabling type checking elsewhere.
+type CableConnection = { isOpen(): boolean };
+type ConsumerWithConnection = Consumer & { connection: CableConnection };
+
 function startStatusPolling(c: Consumer) {
   if (statusPoll !== null) return;
   statusPoll = setInterval(() => {
-    const isOpen = c.connection.isOpen();
+    const isOpen = (c as ConsumerWithConnection).connection.isOpen();
     if (isOpen === lastReportedOpen) return;
     lastReportedOpen = isOpen;
     setCableStatus(isOpen ? "connected" : "disconnected");

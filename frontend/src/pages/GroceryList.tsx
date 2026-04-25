@@ -308,7 +308,7 @@ export function GroceryList() {
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() => clearChecked.mutate()}
+                    onClick={() => clearChecked.mutate(undefined)}
                     disabled={clearChecked.isPending}
                     className="mb-2 text-xs font-medium text-red-500 hover:text-red-700 disabled:opacity-60"
                   >

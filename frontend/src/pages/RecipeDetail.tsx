@@ -216,7 +216,7 @@ export function RecipeDetail() {
             confirmLabel="Delete"
             variant="danger"
             isSubmitting={deleteMutation.isPending}
-            onConfirm={() => deleteMutation.mutate()}
+            onConfirm={() => deleteMutation.mutate(undefined)}
             onCancel={() => setConfirmDelete(false)}
           />
         )}
@@ -238,7 +238,7 @@ export function RecipeDetail() {
         {isSharedRecipe ? (
           <button
             type="button"
-            onClick={() => copyMutation.mutate()}
+            onClick={() => copyMutation.mutate(undefined)}
             disabled={copied || copyMutation.isPending}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition-colors ${
               copied
@@ -570,7 +570,7 @@ export function RecipeDetail() {
         confirmLabel="Delete"
         variant="danger"
         isSubmitting={deleteMutation.isPending}
-        onConfirm={() => deleteMutation.mutate()}
+        onConfirm={() => deleteMutation.mutate(undefined)}
         onCancel={() => setConfirmDelete(false)}
       />
     </div>
