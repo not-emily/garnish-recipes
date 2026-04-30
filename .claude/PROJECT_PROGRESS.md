@@ -18,13 +18,14 @@ Surfaced & fixed during planning: the existing nightly backup cron has been sile
 
 ## Active Tasks
 - [IN PROGRESS] Phase 1: R2 setup + DB backup to R2
-  - ✓ `scripts/backup-db.sh` PATH fix committed locally (still needs to land on prod Mac via `git pull` in `~/.garnish/`)
-  - ⏭ Create R2 bucket `garnish-prod` + scoped API token via Cloudflare dashboard
-  - ⏭ Wire `CLOUDFLARE_R2_*` env vars on prod Mac (`~/.garnish/env`, sourced by Rails launcher + cron)
-  - ⏭ `brew install awscli` + `aws configure --profile r2` on prod Mac
-  - ⏭ Extend `scripts/backup-db.sh` with gzip + `aws s3 cp` to `latest.sql.gz`
-  - ⏭ Restore drill on a scratch DB
-  - ⏭ Write `docs/ops/backup-restore.md` runbook
+  - ✓ `scripts/backup-db.sh` PATH fix committed (still needs to land on prod Mac via `git pull` in `~/.garnish/`)
+  - ✓ `scripts/backup-db.sh` extended with gzip + `aws s3 cp` to `latest.sql.gz` (uncommitted; deploys after smoke test)
+  - ✓ `docs/runbooks/backup-restore.md` runbook written (uncommitted)
+  - ⏳ Create R2 bucket `garnish-prod` + scoped API token via Cloudflare dashboard (1.1 — user)
+  - ⏭ Wire `CLOUDFLARE_R2_*` env vars on prod Mac (`~/.garnish/.env`, sourced by cron) (1.2 — user)
+  - ⏭ `brew install awscli` + `aws configure --profile r2` on prod Mac (1.3 — user)
+  - ⏭ Deploy extended script to Mac + smoke-test manually (1.4 verify — user)
+  - ⏭ Restore drill on a scratch DB (1.5 — user)
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)

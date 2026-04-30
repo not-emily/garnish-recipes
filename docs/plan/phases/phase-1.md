@@ -16,13 +16,13 @@ Stand up a Cloudflare R2 bucket with API credentials, install `aws-cli` on the p
 - `aws-cli` installed and configured against R2's S3-compatible endpoint
 - `scripts/backup-db.sh` extended: gzips the dump, uploads to `r2://garnish-prod/db/latest.sql.gz` overwriting nightly
 - Restore drill executed once: pull from R2 → gunzip → `psql` into a scratch DB
-- `docs/ops/backup-restore.md` runbook
+- `docs/runbooks/backup-restore.md` runbook
 
 ## Files to Create / Modify
 
 - `scripts/backup-db.sh` — modify: gzip step + `aws s3 cp` line + endpoint flag
-- `docs/ops/backup-restore.md` — new
-- `~/.garnish/env` on prod Mac (not in repo) — new
+- `docs/runbooks/backup-restore.md` — new
+- `~/.garnish/.env` on prod Mac (not in repo) — new
 
 ## Dependencies
 
@@ -55,21 +55,21 @@ In the Cloudflare dashboard:
 
 Rails picks these up via `production.rb:45` for ActiveStorage. Both Rails and the backup script need them.
 
-Create `~/.garnish/env` on the prod Mac (sourced by both Rails launch script and cron):
+Create `~/.garnish/.env` on the prod Mac (sourced by both Rails launch script and cron):
 
 ```sh
-# ~/.garnish/env — DO NOT COMMIT
+# ~/.garnish/.env — DO NOT COMMIT
 export CLOUDFLARE_R2_ACCESS_KEY_ID="<from step 1.1.4>"
 export CLOUDFLARE_R2_SECRET_ACCESS_KEY="<from step 1.1.4>"
 export CLOUDFLARE_R2_ACCOUNT_ID="<from step 1.1.2>"
 export CLOUDFLARE_R2_BUCKET="garnish-prod"
 ```
 
-Permissions: `chmod 600 ~/.garnish/env`.
+Permissions: `chmod 600 ~/.garnish/.env`.
 
 Update the Rails launch (Procfile.prod or launchd plist — whatever currently boots Puma) to source this file before starting Rails. Verify env reaches Rails: `Rails.env.production?` console shows the keys via `ENV["CLOUDFLARE_R2_BUCKET"]`.
 
-**Deviation watch:** if the Mac's Rails is launched via a launchd plist with `EnvironmentVariables`, sourcing `~/.garnish/env` from a shell wrapper won't reach launchd. Two fixes: (a) embed the four env vars into the plist directly, or (b) wrap Rails launch in a shell script that `source`s the env file. Option (a) is more robust; option (b) lets you rotate keys without reloading the plist.
+**Deviation watch:** if the Mac's Rails is launched via a launchd plist with `EnvironmentVariables`, sourcing `~/.garnish/.env` from a shell wrapper won't reach launchd. Two fixes: (a) embed the four env vars into the plist directly, or (b) wrap Rails launch in a shell script that `source`s the env file. Option (a) is more robust; option (b) lets you rotate keys without reloading the plist.
 
 ### 1.3 Install + configure `aws-cli`
 
@@ -111,7 +111,7 @@ set -e
 export PATH="/usr/local/pgsql/bin:$PATH"
 
 # Source R2 credentials so aws-cli works under cron.
-[ -f "$HOME/.garnish/env" ] && source "$HOME/.garnish/env"
+[ -f "$HOME/.garnish/.env" ] && source "$HOME/.garnish/.env"
 
 BACKUP_DIR="$HOME/.garnish/backups"
 KEEP=14
@@ -139,7 +139,7 @@ echo "==> Backup complete (local + R2). Kept last $KEEP days locally."
 
 **Deviation watch:**
 - `gzip` keeps the local copy compressed too — saves disk on the Mac. The find pattern matches both compressed and any old uncompressed dumps so legacy files prune cleanly.
-- The `source $HOME/.garnish/env` line is critical for cron because cron's environment has none of the shell rc loading. Without this, `aws s3 cp` fails with missing credentials.
+- The `source $HOME/.garnish/.env` line is critical for cron because cron's environment has none of the shell rc loading. Without this, `aws s3 cp` fails with missing credentials.
 - `aws s3 cp` overwrites by default — exactly what we want for `latest.sql.gz`.
 
 ### 1.5 Restore drill (one-time)
@@ -170,7 +170,7 @@ rm /tmp/garnish-latest.sql
 
 If the counts look reasonable (matches what's in production), the backup is good.
 
-### 1.6 Runbook: `docs/ops/backup-restore.md`
+### 1.6 Runbook: `docs/runbooks/backup-restore.md`
 
 Document in this order: where backups live (local 14-day, R2 latest-only), recovery hierarchy (always try local first), the exact restore commands, and known gotchas. Keep it under 100 lines — this gets read at 2am when something's wrong; brevity matters.
 
@@ -183,7 +183,7 @@ Include:
 - Cron health check: `tail -20 ~/.garnish/backups/cron.log` to see recent runs
 - Common failure modes:
   - "command not found: pg_dump" → PATH issue, check the `export PATH=` line
-  - "Unable to locate credentials" → `~/.garnish/env` not sourced, check it exists and is readable
+  - "Unable to locate credentials" → `~/.garnish/.env` not sourced, check it exists and is readable
   - "Bucket not found" → `CLOUDFLARE_R2_ACCOUNT_ID` mismatched
   - Empty backup → Postgres not running or wrong DB name
 
@@ -194,5 +194,5 @@ Include:
 - [ ] Manual run of `~/.garnish/scripts/backup-db.sh` produces both a local `.sql.gz` file AND an R2 object visible via `aws s3 ls s3://garnish-prod/db/`
 - [ ] Cron-simulated run succeeds: `env -i HOME="$HOME" PATH=/usr/bin:/bin ~/.garnish/scripts/backup-db.sh`
 - [ ] Restore drill completes: scratch DB shows reasonable row counts in `recipes` and `users`
-- [ ] `docs/ops/backup-restore.md` exists and covers all failure modes listed above
+- [ ] `docs/runbooks/backup-restore.md` exists and covers all failure modes listed above
 - [ ] Following morning after first cron run: `aws s3 ls s3://garnish-prod/db/` shows `latest.sql.gz` with LastModified after 3am

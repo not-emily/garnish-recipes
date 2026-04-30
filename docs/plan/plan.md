@@ -115,8 +115,8 @@ garnish/
 ├── scripts/
 │   └── backup-db.sh                            # Modified: gzip + aws s3 cp
 └── docs/
-    └── ops/
-        └── backup-restore.md                   # New: runbook for R2 backup recovery
+    └── runbooks/
+        └── backup-restore.md                   # New: runbook for backup + R2 restore
 ```
 
 ### Modified files (existing)
@@ -173,7 +173,7 @@ DELETE /api/v1/recipes/:id/image
 
 | Phase | Name | Scope | Depends On | Key Outputs |
 |-------|------|-------|------------|-------------|
-| 1 | R2 Setup + DB Backup Offsite | R2 bucket, env vars, aws-cli, extended backup script, restore drill, runbook | — | R2 reachable; nightly `latest.sql.gz`; `docs/ops/backup-restore.md` |
+| 1 | R2 Setup + DB Backup Offsite | R2 bucket, env vars, aws-cli, extended backup script, restore drill, runbook | — | R2 reachable; nightly `latest.sql.gz`; `docs/runbooks/backup-restore.md` |
 | 2 | Recipe Model + Image Display | `has_one_attached :image`, variants, serializer hybrid, all 4 display surfaces (incl. SharedRecipe hero gap) | Phase 1 | Image-bearing recipe via console renders correctly across UI |
 | 3 | Upload UI — File Source | `RecipeImagePicker` component, file picker (camera + library), preview, multipart endpoint | Phase 2 | User uploads file → renders on card + detail |
 | 4 | URL Paste + Share-Copy Deep-Copy | URL paste tab, server fetcher (validates + stores), deep-copy in `SharedRecipesController#copy` | Phase 3 | URL-pasted images store to R2; shared recipes copy attachment cleanly |
