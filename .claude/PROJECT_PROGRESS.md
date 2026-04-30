@@ -2,7 +2,7 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-1.md](../docs/plan/phases/phase-1.md)
+Current Phase: [phase-2.md](../docs/plan/phases/phase-2.md)
 Latest Weekly Report: [weekly-2026-W17.md](../docs/reports/weekly-2026-W17.md)
 Latest Daily Report: [daily-2026-04-29.md](../docs/reports/daily-2026-04-29.md)
 
@@ -12,20 +12,11 @@ Last Updated: 2026-04-30
 
 
 ## Current Focus
-**Phase 1: R2 Setup + DB Backup Offsite.** Stand up Cloudflare R2 with API credentials, install aws-cli on the prod Mac, extend the nightly DB backup to push `latest.sql.gz` to R2, document the restore procedure. Foundation phase for the broader Recipe Images + R2 Backups initiative (4 phases total — see `docs/plan/plan.md`). Phase 1 delivers offsite DB backups as standalone value before any image work begins.
-
-Surfaced & fixed during planning: the existing nightly backup cron has been silently failing for 17 days due to a missing backups dir + `pg_dump` not in cron's PATH. Fix in `scripts/backup-db.sh` (PATH export added) is committed locally; needs to land on the Mac.
+**Phase 2: Recipe Model + Image Display.** Add `has_one_attached :image` to Recipe with `thumb` + `detail` variants, update serializer for hybrid URL output (attachment OR existing `image_url` string fallback), wire display fallback chain across all four surfaces (RecipeCard, RecipeCardCompact, RecipeDetail, SharedRecipe — including filling the SharedRecipe hero gap that's missing entirely). No upload UI yet — verify via Rails console attaching a test image. Phase 1 (R2 setup + DB backups) substantively complete.
 
 ## Active Tasks
-- [IN PROGRESS] Phase 1: R2 setup + DB backup to R2
-  - ✓ `scripts/backup-db.sh` PATH fix committed (still needs to land on prod Mac via `git pull` in `~/.garnish/`)
-  - ✓ `scripts/backup-db.sh` extended with gzip + `aws s3 cp` to `latest.sql.gz` (uncommitted; deploys after smoke test)
-  - ✓ `docs/runbooks/backup-restore.md` runbook written (uncommitted)
-  - ⏳ Create R2 bucket `garnish-prod` + scoped API token via Cloudflare dashboard (1.1 — user)
-  - ⏭ Wire `CLOUDFLARE_R2_*` env vars on prod Mac (`~/.garnish/.env`, sourced by cron) (1.2 — user)
-  - ⏭ `brew install awscli` + `aws configure --profile r2` on prod Mac (1.3 — user)
-  - ⏭ Deploy extended script to Mac + smoke-test manually (1.4 verify — user)
-  - ⏭ Restore drill on a scratch DB (1.5 — user)
+- [NEXT] Phase 2: Recipe model + image display (full plan: `docs/plan/phases/phase-2.md`)
+- [NEXT] Tomorrow morning: verify last night's 3am cron ran successfully — `tail -20 ~/.garnish/backups/cron.log` on the Mac, plus `aws s3 ls s3://garnish-prod/db/` should show LastModified > 03:00 today
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
@@ -68,6 +59,17 @@ Surfaced & fixed during planning: the existing nightly backup cron has been sile
   - **Deviation from initial plan:** original direction was a ~5-line server-side fix in `add_item` to consult `IngredientCategoryMapping` invisibly. Switched to frontend-driven lookup as user types — visible feedback, override-friendly, connection-resilient (works during "reconnecting" states). Server-side `add_item.learn_mapping` still added for the symmetry, but isn't doing the heavy lifting on the user-facing path
   - **Verification:** backend 18/18 tests pass (was 17), frontend 63/63 vitest pass (was 50; +13 new), real `tsc -b` build clean
   - Side note: user reported "reconnecting" overlay seems too frequent on production. Investigated as a possible cause of the original auto-store bug; ruled out (controller path issue, not cable). Logged as standalone follow-up
+- [2026-04-30] Phase 1 (R2 setup + DB backup offsite) — substantively complete; first phase of the new image-upload + R2 plan
+  - Cloudflare R2 bucket `garnish-prod` created with scoped Object Read/Write API token; account-id + creds wired into `~/.garnish/.env` on prod Mac (chmod 600)
+  - `aws-cli` v2 installed via official .pkg installer; `r2` profile configured against R2 endpoint; smoke test (`aws s3 ls`) clean
+  - `scripts/backup-db.sh` extended: now sources `~/.garnish/.env`, gzips `pg_dump` output to `garnish_YYYYMMDD.sql.gz` locally, conditionally `aws s3 cp` to `s3://garnish-prod/db/latest.sql.gz` (overwrites nightly, no retention by design — local 14-day rolling stays as primary recovery layer)
+  - Manual run on Mac confirmed end-to-end: local dump produced, R2 upload succeeded, `latest.sql.gz` visible via `aws s3 ls`
+  - Restore drill on scratch DB: `aws s3 cp` → `gunzip` → `psql garnish_restore_test < ...` → row counts matched prod → cleanup. Full recovery hierarchy verified
+  - `docs/runbooks/backup-restore.md` runbook (107 lines): backup paths, recovery hierarchy, manual-run, local restore, R2 restore, common-failures table (8 modes), drill triggers
+  - **Surfaced during planning:** existing 3am cron had been silently failing for 17 days — missing `~/.garnish/backups` directory blocked the redirect-to-cron.log, AND `pg_dump` not in cron's minimal PATH (`/usr/local/pgsql/bin` missing). Both fixed: `mkdir -p ~/.garnish/backups` once, plus `export PATH="/usr/local/pgsql/bin:$PATH"` at top of script
+  - **Deviation from initial plan:** plan originally said `docs/ops/backup-restore.md`; existing project convention is `docs/runbooks/` (alongside `backend-outage.md`). Updated all references
+  - **Deviation:** env file naming was `~/.garnish/env`; renamed to `~/.garnish/.env` to pick up the existing root-level `.env` gitignore rule. One less risk of accidental commit
+  - First unattended cron run: tonight at 03:00. Verify tomorrow morning via `tail -20 ~/.garnish/backups/cron.log` and `aws s3 ls s3://garnish-prod/db/` (LastModified should be after 03:00)
 
 ## Backlog (Out of Current Plan)
 Preserved from prior "Next Session" list; revisit after the current 4-phase plan ships:
