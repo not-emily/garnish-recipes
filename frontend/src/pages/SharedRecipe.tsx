@@ -7,6 +7,7 @@ import { useSessionLoading } from "@/hooks/useSessionLoading";
 import { useToast } from "@/components/ui/Toast";
 import { MutationButton } from "@/components/ui/MutationButton";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
+import { formatQuantity } from "@/lib/quantity";
 import type { IngredientGroup, InstructionStep } from "@/types/recipe";
 
 /**
@@ -249,7 +250,10 @@ function formatIngredient(ing: {
   optional?: boolean | null;
 }): string {
   const parts: string[] = [];
-  if (ing.quantity != null) parts.push(String(ing.quantity));
+  if (ing.quantity != null) {
+    const qty = formatQuantity(ing.quantity, ing.unit);
+    if (qty) parts.push(qty);
+  }
   if (ing.unit) parts.push(ing.unit);
   parts.push(ing.name);
   let s = parts.join(" ");

@@ -23,6 +23,7 @@ import { copyRecipe } from "@/api/collections";
 import { useToast } from "@/components/ui/Toast";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import { RECIPE_CATEGORIES } from "@/types/recipe";
+import { formatQuantity } from "@/lib/quantity";
 import { ImportProgress } from "@/components/recipes/ImportProgress";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddToCollectionModal } from "@/components/collections/AddToCollectionModal";
@@ -483,9 +484,9 @@ export function RecipeDetail() {
                     >
                       <span className="text-garnish-500">•</span>
                       <span>
-                        {ing.quantity && (
+                        {ing.quantity != null && (
                           <strong className="font-medium">
-                            {ing.quantity}
+                            {formatQuantity(ing.quantity, ing.unit)}
                             {ing.unit ? ` ${ing.unit}` : ""}{" "}
                           </strong>
                         )}

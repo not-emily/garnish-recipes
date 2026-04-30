@@ -18,6 +18,8 @@ import { addGroceryStore, renameGroceryStore, removeGroceryStore } from "@/api/g
 import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
+import { formatQuantity, parseQuantity, unitClass } from "@/lib/quantity";
+import { FractionChipRow } from "@/components/recipes/FractionChipRow";
 import { AnimatePresence } from "framer-motion";
 import { SwipeableGroceryItem } from "@/components/grocery/SwipeableGroceryItem";
 import { MutationButton } from "@/components/ui/MutationButton";
@@ -486,8 +488,41 @@ function EditItemModal({
 }) {
   const [category, setCategory] = useState(item.category);
   const [store, setStore] = useState(item.store ?? "");
-  const [quantity, setQuantity] = useState(item.quantity?.toString() ?? "");
+  const [quantity, setQuantity] = useState(
+    item.quantity != null ? formatQuantity(item.quantity, item.unit) : "",
+  );
   const [unit, setUnit] = useState(item.unit ?? "");
+  const [qtyFocused, setQtyFocused] = useState(false);
+  const [qtyError, setQtyError] = useState(false);
+
+  function handleQtyBlur() {
+    setQtyFocused(false);
+    const trimmed = quantity.trim();
+    if (trimmed === "") {
+      setQtyError(false);
+      return;
+    }
+    setQtyError(parseQuantity(trimmed) === null);
+  }
+
+  function handleSave() {
+    const trimmed = quantity.trim();
+    const parsed = trimmed ? parseQuantity(trimmed) : null;
+    if (trimmed && parsed === null) {
+      setQtyError(true);
+      return;
+    }
+    onSave({
+      quantity: parsed,
+      unit: unit.trim() || null,
+      category,
+      store: store || null,
+    });
+  }
+
+  const qtyClasses = qtyError
+    ? "block w-full rounded-lg border border-red-400 bg-gray-50 px-3 py-2 text-sm focus:border-red-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+    : "block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -506,10 +541,15 @@ function EditItemModal({
               <label className="mb-1 block text-xs font-medium text-gray-600">Qty</label>
               <input
                 type="text"
-                inputMode="decimal"
+                inputMode="text"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500"
+                onChange={(e) => {
+                  setQuantity(e.target.value);
+                  if (qtyError) setQtyError(false);
+                }}
+                onFocus={() => setQtyFocused(true)}
+                onBlur={handleQtyBlur}
+                className={qtyClasses}
               />
             </div>
             <div>
@@ -522,6 +562,14 @@ function EditItemModal({
               />
             </div>
           </div>
+          <FractionChipRow
+            value={quantity}
+            onChipTap={(next) => {
+              setQuantity(next);
+              if (qtyError) setQtyError(false);
+            }}
+            visible={qtyFocused && unitClass(unit) === "fractional"}
+          />
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Category</label>
@@ -565,14 +613,7 @@ function EditItemModal({
           </button>
           <button
             type="button"
-            onClick={() =>
-              onSave({
-                quantity: quantity.trim() ? Number(quantity) : null,
-                unit: unit.trim() || null,
-                category,
-                store: store || null,
-              })
-            }
+            onClick={handleSave}
             className="flex-1 rounded-lg bg-garnish-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-garnish-700"
           >
             Save
@@ -609,15 +650,33 @@ function AddItemForm({
   const [categoryManual, setCategoryManual] = useState(false);
   const [store, setStore] = useState("");
   const [storeManual, setStoreManual] = useState(false);
+  const [qtyFocused, setQtyFocused] = useState(false);
+  const [qtyError, setQtyError] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  function handleQtyBlur() {
+    setQtyFocused(false);
+    const trimmed = quantity.trim();
+    if (trimmed === "") {
+      setQtyError(false);
+      return;
+    }
+    setQtyError(parseQuantity(trimmed) === null);
+  }
+
   async function handleSubmit() {
-    const trimmed = name.trim();
-    if (!trimmed) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    const trimmedQty = quantity.trim();
+    const parsedQty = trimmedQty ? parseQuantity(trimmedQty) : null;
+    if (trimmedQty && parsedQty === null) {
+      setQtyError(true);
+      return;
+    }
     try {
       await onSubmit({
-        name: trimmed,
-        quantity: quantity.trim() ? Number(quantity) : undefined,
+        name: trimmedName,
+        quantity: parsedQty ?? undefined,
         unit: unit.trim() || undefined,
         category,
         store: store || undefined,
@@ -630,6 +689,7 @@ function AddItemForm({
       setQuantity("");
       setUnit("");
       setCategoryManual(false);
+      setQtyError(false);
       nameInputRef.current?.focus();
     } catch {
       // swallow — error toast handled by the mutation helper
@@ -676,11 +736,20 @@ function AddItemForm({
             <label className="mb-1 block text-xs font-medium text-gray-600">Qty</label>
             <input
               type="text"
-              inputMode="decimal"
+              inputMode="text"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => {
+                setQuantity(e.target.value);
+                if (qtyError) setQtyError(false);
+              }}
+              onFocus={() => setQtyFocused(true)}
+              onBlur={handleQtyBlur}
               placeholder="—"
-              className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500"
+              className={
+                qtyError
+                  ? "block w-full rounded-lg border border-red-400 bg-gray-50 px-3 py-2 text-sm focus:border-red-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  : "block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-garnish-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-garnish-500"
+              }
             />
           </div>
           <div>
@@ -711,6 +780,15 @@ function AddItemForm({
             </select>
           </div>
         </div>
+
+        <FractionChipRow
+          value={quantity}
+          onChipTap={(next) => {
+            setQuantity(next);
+            if (qtyError) setQtyError(false);
+          }}
+          visible={qtyFocused && unitClass(unit) === "fractional"}
+        />
 
         {stores.length > 0 && (
           <div>
@@ -755,13 +833,14 @@ function AddItemForm({
 }
 
 function formatItemLabel(item: GroceryListItem): string {
-  const parts = [item.name];
-  if (item.quantity) {
-    const qty = Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(1);
-    parts.push(item.unit ? `${qty} ${item.unit}` : String(qty));
-    return `${parts[0]}, ${parts[1]}`;
+  if (item.quantity != null) {
+    const qty = formatQuantity(item.quantity, item.unit);
+    if (qty) {
+      const tail = item.unit ? `${qty} ${item.unit}` : qty;
+      return `${item.name}, ${tail}`;
+    }
   }
-  return parts[0];
+  return item.name;
 }
 
 function ManageStoresModal({
