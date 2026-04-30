@@ -85,6 +85,7 @@ module Api
         ))
 
         if item.save
+          learn_mapping(item, nil, nil)
           broadcast(list, action: "item_added", item: serialize_item(item))
           render json: { data: serialize_item(item) }, status: :created
         else

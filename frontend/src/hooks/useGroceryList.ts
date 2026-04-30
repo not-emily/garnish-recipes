@@ -10,10 +10,11 @@ import {
   removeGroceryItem,
   clearCheckedItems,
 } from "@/api/groceryLists";
-import type { GroceryList, GroceryListItem, GroceryCategory } from "@/types/grocery";
+import type { GroceryList, GroceryListItem, GroceryCategory, IngredientMapping } from "@/types/grocery";
 import { getConsumer } from "@/lib/cable";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOptimisticMutation } from "@/lib/useOptimisticMutation";
+import { upsertMapping } from "@/lib/ingredientMapping";
 
 type Broadcast =
   | { action: "item_added"; item: GroceryListItem; actor_apikey: string }
@@ -33,6 +34,18 @@ function patchList(
 ): CacheShape {
   if (!old) return old;
   return { ...old, data: { ...old.data, items: patch(old.data.items) } };
+}
+
+function patchMappings(
+  old: CacheShape,
+  patch: (mappings: IngredientMapping[]) => IngredientMapping[]
+): CacheShape {
+  if (!old) return old;
+  return { ...old, data: { ...old.data, mappings: patch(old.data.mappings) } };
+}
+
+function learnMappingFromItem(item: GroceryListItem): IngredientMapping {
+  return { name: item.name, category: item.category, store: item.store };
 }
 
 export function useGroceryList() {
@@ -125,6 +138,12 @@ export function useGroceryList() {
           return next;
         })
       );
+      // Mirror the server's learn_mapping write into the cache so a subsequent
+      // lookupMapping call in the same session sees the freshly-learned entry
+      // without waiting for the 15s refetchInterval or a focus event.
+      qc.setQueryData(QUERY_KEY, (old: CacheShape) =>
+        patchMappings(old, (mappings) => upsertMapping(mappings, learnMappingFromItem(res.data)))
+      );
     },
     successToast: (res) => `Added ${res.data.name}`,
     errorToast: "Couldn't add item",
@@ -153,6 +172,9 @@ export function useGroceryList() {
         patchList(old, (items) =>
           items.map((i) => (i.id === res.data.id ? res.data : i))
         )
+      );
+      qc.setQueryData(QUERY_KEY, (old: CacheShape) =>
+        patchMappings(old, (mappings) => upsertMapping(mappings, learnMappingFromItem(res.data)))
       );
     },
     errorToast: "Couldn't save change",

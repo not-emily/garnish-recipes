@@ -4,27 +4,28 @@
 Roadmap: None
 Current Phase: None
 Latest Weekly Report: [weekly-2026-W17.md](../docs/reports/weekly-2026-W17.md)
-Latest Daily Report: [daily-2026-04-24.md](../docs/reports/daily-2026-04-24.md)
+Latest Daily Report: [daily-2026-04-29.md](../docs/reports/daily-2026-04-29.md)
 
 Previously: [_archived/v4-fraction-support](../docs/plan/_archived/v4-fraction-support/) — Fraction support for ingredient quantities (1 phase, shipped 2026-04-29). Earlier: [v3-post-mvp-1](../docs/plan/_archived/v3-post-mvp-1/) — Stabilization, Polish & Sharing (2026-04-22 → 2026-04-24).
 
-Last Updated: 2026-04-29
+Last Updated: 2026-04-30
 
 
 ## Current Focus
-**Phase 1: Fraction Support for Ingredient Quantities.** Single-phase plan addressing the `1¾ cup → 1.8 cup` rendering problem. Three internal steps: (1) `quantity.ts` parser + formatter utility with Vitest test suite, (2) `FractionChipRow` component + `IngredientEditor` rewrite, (3) wire `formatQuantity` into RecipeDetail / SharedRecipe / GroceryList display + grocery list input forms.
+**No active phase.** Just shipped a standalone grocery-add polish (manual-add now learns + auto-fills the IngredientCategoryMapping with plural-aware lookup, cache freshness on add/update, dropdown reset/leak fixes). Next initiative: planning **(c) Image upload + Cloudflare R2** — covers ActiveStorage wiring, upload UI + variants, and folding R2-backed DB backups into the same setup.
 
 ## Active Tasks
+- [NEXT] Plan image upload + R2 ActiveStorage integration (next session) — phased plan covering R2 bucket/credentials setup, ActiveStorage S3 adapter config, recipe image upload UI, image_processing variants for thumbnails, and DB backup-to-R2 extension of `scripts/backup-db.sh`
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
-- [NEXT] Follow-up: store auto-assign on manual-add — `GroceryListsController#add_item` doesn't consult `IngredientCategoryMapping`. ~5-line fix to lookup the mapping before save
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
+- [NEXT] Investigate "reconnecting" overlay frequency on production — surfaced during today's work; turned out to be unrelated to the auto-store bug, but worth its own look. Candidates: CF Tunnel WS idle handling, indicator threshold flashing on single missed ping, auth-token refresh interaction
 
 ## Open Questions/Blockers
 - **Mobile cross-week swipe**: Swiping past Sunday/Monday on mobile single-day view doesn't advance the week. Desktop week nav buttons work. → **Addressed in Phase 3**.
 - **Imported recipe ingredient quality**: Phase 4 ingestion stores full text like "2 lbs beef" in the `name` field instead of structured `{ name, quantity, unit }`. Breaks grocery aggregation/dedup. → **Not in current plan's scope; tracked in backlog**.
 - **Cook tracking counts at schedule time**: Phase 9A's `MealPlanEntry` `after_commit` increments `cook_count` on create rather than after the date passes. → **Resolved in Phase 4C (2026-04-24)**. The existing trigger already had a `date <= Date.current` guard; actual gap was future-dated entries whose date passes without create/destroy firing. `TallyCooksJob` sweeps nightly and recomputes from source.
-- **Store auto-assign on manual-add**: `GroceryListsController#add_item` doesn't consult `IngredientCategoryMapping`, so re-adding an item manually (e.g., "eggs") doesn't pick up the previously-assigned store. Generation path does the lookup; manual path doesn't. → **~5-line fix; fold into Phase 4 or open as standalone**.
+- **Store auto-assign on manual-add**: → **Resolved 2026-04-30.** Replaced the originally-planned ~5-line server-side fix with a frontend-driven approach: mapping lookup runs as the user types (plural-aware via `lookupMapping`), pre-fills both category and store dropdowns. Backend `add_item` now also calls `learn_mapping` so first-time adds train the system. Better UX (visible feedback) and connection-resilient (lookup against cached mappings, no server roundtrip).
 - **iOS input zoom verification**: `font-size: 16px !important` on inputs shipped in 3D but hasn't been tested on a real iPhone (Safari + PWA). Audit of utility-class overrides came back clean. → **Test before calling Phase 3 fully closed.**
 
 ## Completed This Week
@@ -39,6 +40,24 @@ Last Updated: 2026-04-29
   - **Deviation from initial plan:** plan said chip row visibility was tied just to focus; refined to `focused && unitClass(unit) === "fractional"` so chips don't appear (and tempt) when unit is `g`/`lb`/etc. Cleaner UI signal.
   - **Deviation from initial plan:** invalid-qty UX in `IngredientEditor` shipped as auto-revert rather than validity-bubbling to `RecipeForm` — ~5 lines vs ~30 of cross-component plumbing, and avoids the index-key reorder bug. Bounce-back is the feedback.
   - **Verification:** build clean (`npm run build`), 50/50 tests passing, ESLint clean on all touched files. Browser smoke check + iPhone tap behavior pending the user.
+  - Plan archived to `docs/plan/_archived/v4-fraction-support/`
+- [2026-04-29] Brand icons — replaced purple Vite-default favicon with 🌿 (parsley sprig) Twemoji
+  - `scripts/generate-icons.sh` (adapted from trak's version) — Twemoji v14.0.2 pinned, parameterized by codepoint and bg color, writes `favicon.svg` + `apple-touch-icon-180.png` + `icon-192.png` + `icon-512.png` + `icon-maskable-512.png` (same composite as 512 since 700/1024 ≈ 68% sits inside the 80% maskable safe zone). White background to match `manifest.background_color`
+  - 🌿 chosen for literal name match (a "garnish" IS the herb sprig), color alignment with `garnish-green`, distinctive shape at 16×16 favicon scale
+- [2026-04-29] Frontend lockfile fix for Cloudflare Pages
+  - First Phase 1 deploy failed with `npm ci`: "Missing: @emnapi/core@1.10.0 / @emnapi/runtime@1.10.0" — transitive optional native-module deps that local `npm install` on Arch didn't capture into the lockfile
+  - Fixed by `rm -rf node_modules package-lock.json && npm install` from clean. Fresh resolve also bumped patch/minor versions across the tree (Tailwind RC family, framer-motion patch, etc.)
+  - Side effect: framer-motion's proxy module no longer splits into its own chunk — gets inlined into main `index.js`. ~408 KB single chunk vs 259 KB + 121 KB across two chunks before. Total payload roughly equivalent
+  - **Recurring deploy-environment-divergence theme:** second instance (first was TS project-references in Phase 1 of post-mvp-1). Possible follow-up: `scripts/check-deploy.sh` running `npm run build && npm ci --dry-run` to catch both classes pre-push; user declined for now
+- [2026-04-30] Grocery manual-add: store auto-fill + cache freshness + UX polish (resolves a long-standing follow-up)
+  - Backend `GroceryListsController#add_item` now calls `learn_mapping(item, nil, nil)` after save so first-time adds with a manually-picked store create the household mapping. Symmetric with `update_item`. +1 controller test
+  - New `frontend/src/lib/ingredientMapping.ts` with `lookupMapping(name, mappings)` (plural-aware: tries exact, then strips `s`/`es`, then adds `s`/`es` — mirrors the `(?:es|s)?` tolerance in `categorize.ts`) and `upsertMapping(mappings, mapping)` (returns new array, replaces by normalized name). 13 Vitest cases cover normalize, plural variants both directions, miss paths, and immutability
+  - `AddItemForm` swapped its inline exact-string match for `lookupMapping` so "orange" ↔ "oranges" map to the same household entry
+  - **Cache freshness fix** in `useGroceryList.ts`: `addItem.onSuccess` and `updateItem.onSuccess` now also patch `data.mappings` via `upsertMapping` (alongside the existing `data.items` patch via `patchList`). Before: cache mappings stayed stale after add/update until 15s `refetchInterval`, focus event, page refresh, or non-self broadcast. Symptom: update yogurt's store, immediately type "yogurt" again — no auto-fill until refresh
+  - **UX polish:** hard-reset both category and store dropdowns on successful submit (was: "Category and store persist" comment, but mappings now cover that case better than dropdown stickiness). Reset `storeManual` flag alongside `categoryManual` so subsequent adds aren't blocked. Fixed `mapping.store === null` leak — now `setStore(mapping.store ?? "")` always runs when a mapping is found, instead of gating on truthiness (would have left previous typed name's store sticky during mid-entry edits)
+  - **Deviation from initial plan:** original direction was a ~5-line server-side fix in `add_item` to consult `IngredientCategoryMapping` invisibly. Switched to frontend-driven lookup as user types — visible feedback, override-friendly, connection-resilient (works during "reconnecting" states). Server-side `add_item.learn_mapping` still added for the symmetry, but isn't doing the heavy lifting on the user-facing path
+  - **Verification:** backend 18/18 tests pass (was 17), frontend 63/63 vitest pass (was 50; +13 new), real `tsc -b` build clean
+  - Side note: user reported "reconnecting" overlay seems too frequent on production. Investigated as a possible cause of the original auto-store bug; ruled out (controller path issue, not cable). Logged as standalone follow-up
 
 ## Backlog (Out of Current Plan)
 Preserved from prior "Next Session" list; revisit after the current 4-phase plan ships:

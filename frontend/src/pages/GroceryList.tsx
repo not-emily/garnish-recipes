@@ -18,6 +18,7 @@ import { addGroceryStore, renameGroceryStore, removeGroceryStore } from "@/api/g
 import type { GroceryListItem, GroceryCategory } from "@/types/grocery";
 import { GROCERY_CATEGORIES } from "@/types/grocery";
 import { categorizeIngredient } from "@/lib/categorize";
+import { lookupMapping } from "@/lib/ingredientMapping";
 import { formatQuantity, parseQuantity, unitClass } from "@/lib/quantity";
 import { FractionChipRow } from "@/components/recipes/FractionChipRow";
 import { AnimatePresence } from "framer-motion";
@@ -688,7 +689,10 @@ function AddItemForm({
       setName("");
       setQuantity("");
       setUnit("");
+      setCategory("other");
+      setStore("");
       setCategoryManual(false);
+      setStoreManual(false);
       setQtyError(false);
       nameInputRef.current?.focus();
     } catch {
@@ -698,11 +702,10 @@ function AddItemForm({
 
   function handleNameChange(value: string) {
     setName(value);
-    const normalized = value.trim().toLowerCase();
-    const mapping = mappings.find((m) => m.name === normalized);
+    const mapping = lookupMapping(value, mappings);
     if (mapping) {
       if (!categoryManual) setCategory(mapping.category);
-      if (!storeManual && mapping.store) setStore(mapping.store);
+      if (!storeManual) setStore(mapping.store ?? "");
     } else {
       if (!categoryManual) setCategory(categorizeIngredient(value));
       if (!storeManual) setStore("");

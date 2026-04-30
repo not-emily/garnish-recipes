@@ -156,6 +156,19 @@ module Api
         assert_response :forbidden
       end
 
+      test "add_item learns mapping for category and store" do
+        post "/api/v1/grocery_list/items",
+             headers: auth_headers(@owner),
+             params: { item: { name: "Almond Milk", category: "dairy", store: "Sam's Club" } },
+             as: :json
+        assert_response :created
+
+        mapping = @household.ingredient_category_mappings.find_by(ingredient_name: "almond milk")
+        assert_not_nil mapping
+        assert_equal "dairy", mapping.category
+        assert_equal "Sam's Club", mapping.store
+      end
+
       # --- check / uncheck ---
 
       test "check_item marks item as checked" do
