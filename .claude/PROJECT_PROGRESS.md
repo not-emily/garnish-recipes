@@ -1,8 +1,8 @@
 # Project Progress - Garnish
 
 ## Plan Files
-Roadmap: None
-Current Phase: None
+Roadmap: [plan.md](../docs/plan/plan.md)
+Current Phase: [phase-1.md](../docs/plan/phases/phase-1.md)
 Latest Weekly Report: [weekly-2026-W17.md](../docs/reports/weekly-2026-W17.md)
 Latest Daily Report: [daily-2026-04-29.md](../docs/reports/daily-2026-04-29.md)
 
@@ -12,10 +12,19 @@ Last Updated: 2026-04-30
 
 
 ## Current Focus
-**No active phase.** Just shipped a standalone grocery-add polish (manual-add now learns + auto-fills the IngredientCategoryMapping with plural-aware lookup, cache freshness on add/update, dropdown reset/leak fixes). Next initiative: planning **(c) Image upload + Cloudflare R2** — covers ActiveStorage wiring, upload UI + variants, and folding R2-backed DB backups into the same setup.
+**Phase 1: R2 Setup + DB Backup Offsite.** Stand up Cloudflare R2 with API credentials, install aws-cli on the prod Mac, extend the nightly DB backup to push `latest.sql.gz` to R2, document the restore procedure. Foundation phase for the broader Recipe Images + R2 Backups initiative (4 phases total — see `docs/plan/plan.md`). Phase 1 delivers offsite DB backups as standalone value before any image work begins.
+
+Surfaced & fixed during planning: the existing nightly backup cron has been silently failing for 17 days due to a missing backups dir + `pg_dump` not in cron's PATH. Fix in `scripts/backup-db.sh` (PATH export added) is committed locally; needs to land on the Mac.
 
 ## Active Tasks
-- [NEXT] Plan image upload + R2 ActiveStorage integration (next session) — phased plan covering R2 bucket/credentials setup, ActiveStorage S3 adapter config, recipe image upload UI, image_processing variants for thumbnails, and DB backup-to-R2 extension of `scripts/backup-db.sh`
+- [IN PROGRESS] Phase 1: R2 setup + DB backup to R2
+  - ✓ `scripts/backup-db.sh` PATH fix committed locally (still needs to land on prod Mac via `git pull` in `~/.garnish/`)
+  - ⏭ Create R2 bucket `garnish-prod` + scoped API token via Cloudflare dashboard
+  - ⏭ Wire `CLOUDFLARE_R2_*` env vars on prod Mac (`~/.garnish/env`, sourced by Rails launcher + cron)
+  - ⏭ `brew install awscli` + `aws configure --profile r2` on prod Mac
+  - ⏭ Extend `scripts/backup-db.sh` with gzip + `aws s3 cp` to `latest.sql.gz`
+  - ⏭ Restore drill on a scratch DB
+  - ⏭ Write `docs/ops/backup-restore.md` runbook
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
