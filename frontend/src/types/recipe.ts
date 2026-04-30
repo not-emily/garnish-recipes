@@ -87,6 +87,11 @@ export interface RecipeSummary {
   difficulty?: Difficulty | null;
   servings?: number | null;
   image_url?: string | null;
+  // image_thumb_url and image_detail_url surface the user-uploaded ActiveStorage
+  // attachment via Rails proxy URLs. image_url stays as the URL-ingestion-captured
+  // string (og:image, JSON-LD). Display fallback chain: thumb/detail variant > url string > letter.
+  image_thumb_url?: string | null;
+  image_detail_url?: string | null;
   times_cooked: number;
   last_cooked_at?: string | null;
   average_rating?: number | null;

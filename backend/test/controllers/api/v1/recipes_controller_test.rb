@@ -145,6 +145,34 @@ module Api
         assert recipe["contributed_by"]["id"].present?
       end
 
+      test "show returns null image_thumb_url and image_detail_url when no attachment" do
+        get "/api/v1/recipes/#{@recipe.apikey}", headers: auth_headers(@owner), as: :json
+        assert_response :ok
+        recipe = JSON.parse(response.body)["data"]
+        assert recipe.key?("image_thumb_url")
+        assert recipe.key?("image_detail_url")
+        assert_nil recipe["image_thumb_url"]
+        assert_nil recipe["image_detail_url"]
+      end
+
+      test "show returns proxy URLs for image_thumb_url and image_detail_url when attached" do
+        require "tempfile"
+        tf = Tempfile.new([ "test", ".jpg" ])
+        tf.binmode
+        tf.write("\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xFF\xD9".b)
+        tf.rewind
+        @recipe.image.attach(io: tf, filename: "test.jpg", content_type: "image/jpeg")
+        assert @recipe.image.attached?, "expected attachment to succeed for valid JPEG"
+
+        get "/api/v1/recipes/#{@recipe.apikey}", headers: auth_headers(@owner), as: :json
+        assert_response :ok
+        recipe = JSON.parse(response.body)["data"]
+        assert_match(%r{/rails/active_storage/representations/proxy/}, recipe["image_thumb_url"])
+        assert_match(%r{/rails/active_storage/representations/proxy/}, recipe["image_detail_url"])
+      ensure
+        tf&.close!
+      end
+
       test "show returns 404 for recipe in another household" do
         get "/api/v1/recipes/#{@other_recipe.apikey}", headers: auth_headers(@owner), as: :json
         assert_response :not_found

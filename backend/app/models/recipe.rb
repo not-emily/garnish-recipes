@@ -26,6 +26,22 @@ class Recipe < ApplicationRecord
   # URL imports don't have an attachment (the source_url string is enough).
   has_one_attached :source_file
 
+  # User-uploaded display image for the recipe. Coexists with the existing
+  # `image_url` string field: that field stays for URL-ingestion captures
+  # (og:image, JSON-LD) and is hotlinked at render time. This attachment is
+  # for explicit user uploads and pasted-URL fetches. Display preference is
+  # attachment > url string > letter fallback.
+  IMAGE_ALLOWED_TYPES = %w[image/jpeg image/png image/webp image/heic image/heif].freeze
+  IMAGE_MAX_SIZE = 10.megabytes
+
+  has_one_attached :image do |attachable|
+    attachable.variant :thumb,  resize_to_fit: [ 600, 450 ],  saver: { strip: true, quality: 85 }
+    attachable.variant :detail, resize_to_fit: [ 1200, 900 ], saver: { strip: true, quality: 88 }
+  end
+
+  validate :image_size_within_limit
+  validate :image_content_type_allowed
+
   validates :apikey, presence: true, uniqueness: true
   validates :title, presence: true, unless: :import_in_progress?
   validates :recipe_type, inclusion: { in: RECIPE_TYPES }
@@ -185,6 +201,24 @@ class Recipe < ApplicationRecord
       unless step.is_a?(Hash) && step["text"].is_a?(String) && step["text"].present?
         errors.add(:instructions, "step #{i} must have text")
       end
+    end
+  end
+
+  # Purge a too-big or wrong-typed attachment immediately so we don't leave an
+  # orphan blob in R2 / local storage when the save fails.
+  def image_size_within_limit
+    return unless image.attached?
+    if image.byte_size > IMAGE_MAX_SIZE
+      image.purge
+      errors.add(:image, "must be under #{IMAGE_MAX_SIZE / 1.megabyte} MB")
+    end
+  end
+
+  def image_content_type_allowed
+    return unless image.attached?
+    unless IMAGE_ALLOWED_TYPES.include?(image.content_type)
+      image.purge
+      errors.add(:image, "must be JPEG, PNG, WebP, or HEIC")
     end
   end
 end

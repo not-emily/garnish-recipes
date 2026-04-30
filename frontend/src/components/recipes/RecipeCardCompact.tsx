@@ -16,9 +16,9 @@ export function RecipeCardCompact({ recipe }: RecipeCardCompactProps) {
       className="flex w-40 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
     >
       <div className="relative aspect-square bg-gradient-to-br from-garnish-50 to-garnish-100">
-        {recipe.image_url ? (
+        {(recipe.image_thumb_url ?? recipe.image_url) ? (
           <img
-            src={recipe.image_url}
+            src={recipe.image_thumb_url ?? recipe.image_url ?? ""}
             alt={title}
             loading="lazy"
             className="h-full w-full object-cover"

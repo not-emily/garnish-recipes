@@ -83,12 +83,27 @@ export function SharedRecipe() {
     ? RECIPE_CATEGORIES.find((c) => c.value === recipe.category)?.label
     : null;
 
+  const heroSrc = recipe.image_detail_url ?? recipe.image_url ?? null;
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       {/* Attribution */}
       <p className="text-xs text-gray-400">
         Shared from <span className="font-medium text-gray-600">{recipe.shared_by_household}</span>
       </p>
+
+      {/* Hero — render only when we have an image. Skipping the gradient
+          placeholder for shared recipes keeps the public view tighter. */}
+      {heroSrc && (
+        <div className="mt-3 aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-garnish-50 to-garnish-100">
+          <img
+            src={heroSrc}
+            alt={recipe.title}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
 
       {/* Header */}
       <h1 className="mt-2 text-2xl font-bold text-gray-900">{recipe.title}</h1>

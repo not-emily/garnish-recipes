@@ -347,9 +347,9 @@ export function RecipeDetail() {
 
       {/* Hero */}
       <div className="aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-garnish-50 to-garnish-100">
-        {recipe.image_url ? (
+        {(recipe.image_detail_url ?? recipe.image_url) ? (
           <img
-            src={recipe.image_url}
+            src={recipe.image_detail_url ?? recipe.image_url ?? ""}
             alt={recipe.title}
             className="h-full w-full object-cover"
           />

@@ -273,6 +273,8 @@ module Api
           difficulty: recipe.difficulty,
           servings: recipe.servings,
           image_url: recipe.image_url,
+          image_thumb_url: attachment_variant_url(recipe.image, :thumb),
+          image_detail_url: attachment_variant_url(recipe.image, :detail),
           times_cooked: recipe.times_cooked,
           last_cooked_at: recipe.last_cooked_at,
           average_rating: recipe.average_rating&.to_f,

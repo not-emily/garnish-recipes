@@ -12,11 +12,22 @@ Last Updated: 2026-04-30
 
 
 ## Current Focus
-**Phase 2: Recipe Model + Image Display.** Add `has_one_attached :image` to Recipe with `thumb` + `detail` variants, update serializer for hybrid URL output (attachment OR existing `image_url` string fallback), wire display fallback chain across all four surfaces (RecipeCard, RecipeCardCompact, RecipeDetail, SharedRecipe — including filling the SharedRecipe hero gap that's missing entirely). No upload UI yet — verify via Rails console attaching a test image. Phase 1 (R2 setup + DB backups) substantively complete.
+**Phase 2 substantively done in dev — manual smoke test pending tomorrow before deploy.** Recipe model has `has_one_attached :image` with thumb + detail variants, serializers output hybrid URLs (attachment > image_url string > null), all four display surfaces wired (incl. filling the SharedRecipe hero gap). Backend tests + frontend build clean. Local end-to-end pipeline confirmed via `bin/rails runner` smoke. Not yet pushed/deployed — testing in dev first.
+
+Phase 3 (upload UI — file source) starts after tomorrow's verification.
 
 ## Active Tasks
-- [NEXT] Phase 2: Recipe model + image display (full plan: `docs/plan/phases/phase-2.md`)
+- [IN PROGRESS] Phase 2: Recipe model + image display
+  - ✓ Model: `has_one_attached :image` + `thumb` (600x450) + `detail` (1200x900) variants + 10MB cap + content-type allowlist (jpeg/png/webp/heic) + purge-on-reject validators
+  - ✓ Serializers (recipes + shared_recipes) emit `image_thumb_url` + `image_detail_url` via shared `attachment_variant_url` helper in ApplicationController
+  - ✓ ActiveStorage proxy controllers patched with `Cache-Control: public, max-age=31536000, immutable` so CF caches at edge
+  - ✓ Frontend types + 4 display surfaces with attachment-first fallback chain (RecipeCard, RecipeCardCompact, RecipeDetail, SharedRecipe — last one was missing a hero entirely; now added)
+  - ✓ Backend tests: 5 model + 2 serializer cases. 308/308 backend tests pass overall
+  - ✓ Frontend build clean (real `tsc -b`); vitest 63/63
+  - ✓ Local smoke test via `bin/rails runner`: attach succeeds, variant URL signed correctly through proxy route
+  - ⏭ **Tomorrow morning manual test in dev:** start Rails locally → attach an image to a recipe via console → visit /recipes/:id in browser → confirm RecipeDetail hero renders. Repeat for shared link + browse cards. Then push + deploy
 - [NEXT] Tomorrow morning: verify last night's 3am cron ran successfully — `tail -20 ~/.garnish/backups/cron.log` on the Mac, plus `aws s3 ls s3://garnish-prod/db/` should show LastModified > 03:00 today
+- [NEXT] Phase 3: Upload UI — file source (RecipeImagePicker component + multipart endpoint, plan: `docs/plan/phases/phase-3.md`). Starts after Phase 2 verification.
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
@@ -70,6 +81,18 @@ Last Updated: 2026-04-30
   - **Deviation from initial plan:** plan originally said `docs/ops/backup-restore.md`; existing project convention is `docs/runbooks/` (alongside `backend-outage.md`). Updated all references
   - **Deviation:** env file naming was `~/.garnish/env`; renamed to `~/.garnish/.env` to pick up the existing root-level `.env` gitignore rule. One less risk of accidental commit
   - First unattended cron run: tonight at 03:00. Verify tomorrow morning via `tail -20 ~/.garnish/backups/cron.log` and `aws s3 ls s3://garnish-prod/db/` (LastModified should be after 03:00)
+
+- [2026-04-30] Phase 2 (Recipe model + image display) — substantively done in dev (push + deploy pending tomorrow's manual test)
+  - `Recipe#image` ActiveStorage attachment with `thumb` (600×450 4:3) and `detail` (1200×900 4:3) variants via `image_processing` (`resize_to_fit` preserves aspect; CSS `object-cover` handles cropping consistently across surfaces). Originals stored too. Variants generated lazily on first request, cached in `active_storage_variant_records`
+  - Validations: `IMAGE_MAX_SIZE = 10.megabytes` cap, `IMAGE_ALLOWED_TYPES` allowlist (image/jpeg, image/png, image/webp, image/heic, image/heif). Both validators call `image.purge` before adding the error so we don't leave orphan blobs in storage
+  - `image_url` STRING field is untouched — keeps hotlinking URL-ingestion captures (og:image, JSON-LD via `RecipeIngestion::OpenGraphExtractor` + `Normalizer.extract_image`). Existing recipes render unchanged. Hybrid is the design call: side-steps third-party redistribution concerns and avoids backfill migration
+  - `attachment_variant_url(attachment, variant_name)` helper added to `ApplicationController` so both `RecipesController#serialize_recipe` and `SharedRecipesController#serialize_public_recipe` produce `image_thumb_url` / `image_detail_url` consistently. Returns nil when not attached
+  - `config/initializers/active_storage.rb` patches `ActiveStorage::Blobs::ProxyController` and `Representations::ProxyController` to set `Cache-Control: public, max-age=31536000, immutable`. Blob URLs are signed-token-stable, safe to mark immutable. CF caches the proxied bytes after first hit
+  - Frontend display fallback chain (`image_*_url ?? image_url ?? null`) wired across `RecipeCard` (4:3 thumb), `RecipeCardCompact` (1:1 thumb), `RecipeDetail` (16:9 detail hero), and `SharedRecipe` (16:9 detail hero — was previously omitted entirely; now rendered conditionally when `src` is present, no gradient placeholder for signed-out viewers). Types updated in `RecipeSummary` + `SharedRecipeView`
+  - **Discovery during testing (worth remembering):** ActiveStorage's `attach(io:)` silently fails on `StringIO` objects in our config — needs a real file-like (`Tempfile`, `File`). Documented in `recipe_image_test.rb` header. Lost ~30min before tracing it
+  - **Discovery during testing (more interesting):** `attach()` on a persisted record triggers an internal save that fires the model's validators. When a validator rejects, `attach()` returns `nil`, the attachment is purged in the validator, and nothing persists. Tests assert this observable behavior (`assert_nil result`, `assert_not attached?`) rather than fighting it via `record.save` afterwards
+  - **Verification:** 308/308 backend tests (was 303; +5 model + 2 serializer), real `tsc -b` build clean, vitest 63/63, end-to-end smoke via `bin/rails runner` — variant URL signed and routes through proxy correctly
+  - Plan reference: `docs/plan/phases/phase-2.md`
 
 ## Backlog (Out of Current Plan)
 Preserved from prior "Next Session" list; revisit after the current 4-phase plan ships:

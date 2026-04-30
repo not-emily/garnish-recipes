@@ -73,6 +73,8 @@ export interface SharedRecipeView {
   difficulty: string | null;
   servings: number | null;
   image_url: string | null;
+  image_thumb_url: string | null;
+  image_detail_url: string | null;
   source_url: string | null;
   notes: string | null;
   ingredient_groups: unknown[];

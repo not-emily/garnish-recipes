@@ -76,6 +76,19 @@ class ApplicationController < ActionController::API
     scope_class_name.constantize.new(Current.membership, scope).resolve
   end
 
+  # Builds a Rails proxy URL for an ActiveStorage variant. Used by recipe
+  # serializers to surface image_thumb_url / image_detail_url. Returns nil if
+  # the attachment isn't present so callers can write `attachment_url(...)`
+  # without a guard.
+  def attachment_variant_url(attachment, variant_name)
+    return nil unless attachment&.attached?
+    Rails.application.routes.url_helpers.rails_storage_proxy_url(
+      attachment.variant(variant_name),
+      host: request.host_with_port,
+      protocol: request.protocol
+    )
+  end
+
   def authorization_message(result)
     case result[:reason]
     when :not_member
