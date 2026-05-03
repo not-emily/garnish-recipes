@@ -33,22 +33,95 @@ export function getRecipe(apikey: string, collectionApikey?: string) {
   return api<ApiResponse<Recipe>>(`/recipes/${apikey}${qs}`);
 }
 
-export function createRecipe(input: RecipeInput) {
+// Image-staging intent paired with a recipe save. The picker emits this; the
+// form passes it through to createRecipe / updateRecipe.
+export type ImageStaging =
+  | { kind: "none" }
+  | { kind: "replace"; file: File }
+  | { kind: "remove" };
+
+export function createRecipe(input: RecipeInput, imageStaging: ImageStaging = { kind: "none" }) {
+  if (imageStaging.kind === "none") {
+    return api<ApiResponse<Recipe>>("/recipes", {
+      method: "POST",
+      body: JSON.stringify({ recipe: input }),
+    });
+  }
   return api<ApiResponse<Recipe>>("/recipes", {
     method: "POST",
-    body: JSON.stringify({ recipe: input }),
+    body: buildRecipeFormData(input, imageStaging),
   });
 }
 
-export function updateRecipe(apikey: string, input: Partial<RecipeInput>) {
+export function updateRecipe(
+  apikey: string,
+  input: Partial<RecipeInput>,
+  imageStaging: ImageStaging = { kind: "none" }
+) {
+  if (imageStaging.kind === "none") {
+    return api<ApiResponse<Recipe>>(`/recipes/${apikey}`, {
+      method: "PATCH",
+      body: JSON.stringify({ recipe: input }),
+    });
+  }
   return api<ApiResponse<Recipe>>(`/recipes/${apikey}`, {
     method: "PATCH",
-    body: JSON.stringify({ recipe: input }),
+    body: buildRecipeFormData(input, imageStaging),
   });
 }
 
 export function deleteRecipe(apikey: string) {
   return api<void>(`/recipes/${apikey}`, { method: "DELETE" });
+}
+
+// --- FormData encoding for nested recipe attrs + image ---
+
+function buildRecipeFormData(input: Partial<RecipeInput>, imageStaging: ImageStaging): FormData {
+  const fd = new FormData();
+  appendNested(fd, "recipe", input);
+  if (imageStaging.kind === "replace") {
+    fd.append("recipe[image]", imageStaging.file);
+  } else if (imageStaging.kind === "remove") {
+    fd.append("recipe[remove_image]", "true");
+  }
+  return fd;
+}
+
+// Encodes a JS value in Rails' nested-params multipart notation:
+//   { tags: ["a", "b"] }                 → tags[]=a, tags[]=b
+//   { tags: [] }                         → tags[]=""  (controller compacts)
+//   { ingredient_groups: [{ label: x }]} → ingredient_groups[0][label]=x
+//   { description: null }                → description=""  (controller nils blanks)
+function appendNested(fd: FormData, key: string, value: unknown): void {
+  if (value === null || value === undefined) {
+    fd.append(key, "");
+    return;
+  }
+  if (value instanceof Blob) {
+    fd.append(key, value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      fd.append(`${key}[]`, "");
+      return;
+    }
+    value.forEach((item, i) => {
+      if (item !== null && typeof item === "object" && !(item instanceof Blob)) {
+        appendNested(fd, `${key}[${i}]`, item);
+      } else {
+        appendNested(fd, `${key}[]`, item);
+      }
+    });
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      appendNested(fd, `${key}[${k}]`, v);
+    }
+    return;
+  }
+  fd.append(key, String(value));
 }
 
 // --- Sharing ---

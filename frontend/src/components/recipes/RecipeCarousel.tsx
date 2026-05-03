@@ -17,7 +17,7 @@ export function RecipeCarousel({ title, icon: Icon, recipes }: RecipeCarouselPro
         <Icon className="h-4 w-4 text-garnish-600" />
         <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
       </div>
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none">
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
         {recipes.map((recipe) => (
           <RecipeCardCompact key={recipe.id} recipe={recipe} />
         ))}

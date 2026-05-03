@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { IngredientEditor } from "./IngredientEditor";
 import { InstructionEditor } from "./InstructionEditor";
+import { RecipeImagePicker } from "./RecipeImagePicker";
 import { RECIPE_CATEGORIES, DIFFICULTIES } from "@/types/recipe";
 import type {
   Recipe,
@@ -11,12 +12,13 @@ import type {
   IngredientGroup,
   InstructionStep,
 } from "@/types/recipe";
+import type { ImageStaging } from "@/api/recipes";
 import { isApiError } from "@/api/client";
 
 interface RecipeFormProps {
   recipeType: RecipeType;
   initial?: Recipe;
-  onSubmit: (input: RecipeInput) => Promise<void>;
+  onSubmit: (input: RecipeInput, imageStaging: ImageStaging) => Promise<void>;
   submitLabel: string;
 }
 
@@ -56,6 +58,8 @@ export function RecipeForm({
   const [instructions, setInstructions] = useState<InstructionStep[]>(
     initial?.instructions ?? []
   );
+
+  const [imageStaging, setImageStaging] = useState<ImageStaging>({ kind: "none" });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -106,7 +110,7 @@ export function RecipeForm({
     }
 
     try {
-      await onSubmit(input);
+      await onSubmit(input, imageStaging);
     } catch (err) {
       setError(isApiError(err) ? err.message : "Couldn't save the recipe");
       setIsSubmitting(false);
@@ -142,6 +146,16 @@ export function RecipeForm({
           className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-garnish-500 focus:outline-none focus:ring-1 focus:ring-garnish-500"
         />
       </div>
+
+      {/* Photo (events don't have photos — they're meal plan annotations) */}
+      {!isEvent && (
+        <RecipeImagePicker
+          committedImageUrl={initial?.image_thumb_url ?? initial?.image_url ?? null}
+          staging={imageStaging}
+          onChange={setImageStaging}
+          disabled={isSubmitting}
+        />
+      )}
 
       {/* Description */}
       <div>

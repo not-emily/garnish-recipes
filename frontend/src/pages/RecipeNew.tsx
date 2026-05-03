@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, BookOpen, Snowflake, Calendar } from "lucide-react";
-import { createRecipe } from "@/api/recipes";
+import { createRecipe, type ImageStaging } from "@/api/recipes";
 import { RecipeForm } from "@/components/recipes/RecipeForm";
 import type { RecipeType, RecipeInput } from "@/types/recipe";
 
@@ -38,9 +38,13 @@ export function RecipeNew() {
   const [recipeType, setRecipeType] = useState<RecipeType | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (input: RecipeInput) => createRecipe(input),
-    onSuccess: (res) => {
+    mutationFn: ({ input, imageStaging }: { input: RecipeInput; imageStaging: ImageStaging }) =>
+      createRecipe(input, imageStaging),
+    onSuccess: (res, vars) => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      if (vars.imageStaging.kind !== "none") {
+        queryClient.invalidateQueries({ queryKey: ["smart-sections"] });
+      }
       navigate(`/recipes/${res.data.id}`);
     },
   });
@@ -98,8 +102,8 @@ export function RecipeNew() {
           <div className="mt-6">
             <RecipeForm
               recipeType={recipeType}
-              onSubmit={async (input) => {
-                await mutation.mutateAsync(input);
+              onSubmit={async (input, imageStaging) => {
+                await mutation.mutateAsync({ input, imageStaging });
               }}
               submitLabel="Create"
             />

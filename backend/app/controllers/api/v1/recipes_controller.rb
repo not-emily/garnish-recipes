@@ -86,7 +86,8 @@ module Api
 
       # POST /api/v1/recipes
       def create
-        recipe = Current.household.recipes.build(recipe_params)
+        attrs, _remove_image = extract_recipe_params
+        recipe = Current.household.recipes.build(attrs)
         recipe.contributed_by = current_user
 
         return unless authorize!(recipe)
@@ -102,8 +103,15 @@ module Api
       def update
         return unless authorize!(@recipe)
 
-        if @recipe.update(recipe_params)
-          render json: { data: serialize_recipe(@recipe, full: true) }
+        attrs, remove_image = extract_recipe_params
+
+        if @recipe.update(attrs)
+          # Honour `remove_image: true` only when no new image was also passed —
+          # if the user picked a replacement, that wins and we shouldn't purge.
+          if remove_image && !attrs.key?(:image) && @recipe.image.attached?
+            @recipe.image.purge
+          end
+          render json: { data: serialize_recipe(@recipe.reload, full: true) }
         else
           render_validation_errors(@recipe)
         end
@@ -192,11 +200,18 @@ module Api
         }, status: :not_found
       end
 
+      # Nullable string/enum fields that should be stored as nil — not as
+      # empty string — when the user clears them. JSON callers send `null`
+      # natively; FormData callers send `""` (no native null in multipart).
+      # Normalising here keeps both paths equivalent.
+      NILIFY_BLANK = %i[description category cuisine primary_protein difficulty source_url image_url notes].freeze
+
       def recipe_params
         permitted = params.require(:recipe).permit(
           :recipe_type, :title, :description, :category, :cuisine,
           :primary_protein, :prep_time_minutes, :cook_time_minutes,
           :difficulty, :servings, :source_url, :notes, :image_url,
+          :image, :remove_image,
           tags: [],
           ingredient_groups: [
             :label,
@@ -204,6 +219,15 @@ module Api
           ],
           instructions: [:step, :text, :timer_minutes]
         )
+        # FormData can't represent an empty array directly — clients send
+        # `recipe[tags][]=""` as the empty-array marker. Strip blanks so we
+        # store [] rather than [""].
+        if permitted[:tags].is_a?(Array)
+          permitted[:tags] = permitted[:tags].compact_blank
+        end
+        NILIFY_BLANK.each do |k|
+          permitted[k] = nil if permitted.key?(k) && permitted[k].is_a?(String) && permitted[k].blank?
+        end
         # Convert structured params to plain hashes for JSONB storage
         if permitted[:ingredient_groups].is_a?(Array)
           permitted[:ingredient_groups] = permitted[:ingredient_groups].map(&:to_h)
@@ -212,6 +236,15 @@ module Api
           permitted[:instructions] = permitted[:instructions].map(&:to_h)
         end
         permitted
+      end
+
+      # Splits `remove_image` off from the standard recipe attributes — it's
+      # a controller-level intent, not a model attribute.
+      def extract_recipe_params
+        perm = recipe_params
+        flag = perm.delete(:remove_image)
+        remove_image = [ true, "true", "1", 1 ].include?(flag)
+        [ perm, remove_image ]
       end
 
       def filter_scope(scope)
@@ -257,15 +290,6 @@ module Api
         end
       end
 
-      def render_validation_errors(recipe)
-        render json: {
-          error: {
-            code: "validation_failed",
-            message: recipe.errors.full_messages.first,
-            details: recipe.errors.messages
-          }
-        }, status: :unprocessable_entity
-      end
     end
   end
 end

@@ -28,11 +28,12 @@ export function RecipeCard({ recipe, linkState, onAddToPlan }: RecipeCardProps) 
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
+      className="h-full"
     >
       <Link
         to={`/recipes/${recipe.id}`}
         state={linkState}
-        className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
+        className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
       >
         <div className="relative h-0 overflow-hidden bg-gradient-to-br from-garnish-50 to-garnish-100" style={{ paddingBottom: '75%' }}>
           {(recipe.image_thumb_url ?? recipe.image_url) ? (

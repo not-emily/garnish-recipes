@@ -15,16 +15,19 @@ export function RecipeCardCompact({ recipe }: RecipeCardCompactProps) {
       to={`/recipes/${recipe.id}`}
       className="flex w-40 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
     >
-      <div className="relative aspect-square bg-gradient-to-br from-garnish-50 to-garnish-100">
+      <div
+        className="relative h-0 overflow-hidden bg-gradient-to-br from-garnish-50 to-garnish-100"
+        style={{ paddingBottom: '100%' }}
+      >
         {(recipe.image_thumb_url ?? recipe.image_url) ? (
           <img
             src={recipe.image_thumb_url ?? recipe.image_url ?? ""}
             alt={title}
             loading="lazy"
-            className="h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-3xl text-garnish-300">
+          <div className="absolute inset-0 flex items-center justify-center text-3xl text-garnish-300">
             {initial}
           </div>
         )}

@@ -1,4 +1,5 @@
 require "test_helper"
+require "tempfile"
 
 module Api
   module V1
@@ -318,6 +319,129 @@ module Api
 
         assert_response :forbidden
         assert_equal "Beef Stew", @recipe.reload.title
+      end
+
+      # --- Update / Create with bundled image (multipart) ---
+
+      SMALL_JPEG = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xFF\xD9".b.freeze
+
+      def upload_file(bytes, filename:, content_type:)
+        tf = Tempfile.new([ "upload", File.extname(filename) ])
+        tf.binmode
+        tf.write(bytes)
+        tf.rewind
+        Rack::Test::UploadedFile.new(tf.path, content_type, original_filename: filename)
+      end
+
+      test "update with bundled image attaches the image and returns variant urls" do
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: {
+                recipe: {
+                  title: "Stew with photo",
+                  image: upload_file(SMALL_JPEG, filename: "stew.jpg", content_type: "image/jpeg")
+                }
+              },
+              headers: auth_headers(@owner)
+
+        assert_response :ok
+        body = JSON.parse(response.body)
+        assert_equal "Stew with photo", body["data"]["title"]
+        assert body["data"]["image_thumb_url"].present?
+        assert body["data"]["image_detail_url"].present?
+        assert @recipe.reload.image.attached?
+      end
+
+      test "create with bundled image attaches on first save" do
+        post "/api/v1/recipes",
+             params: {
+               recipe: {
+                 recipe_type: "full",
+                 title: "New with image",
+                 category: "entree",
+                 servings: 4,
+                 image: upload_file(SMALL_JPEG, filename: "new.jpg", content_type: "image/jpeg")
+               }
+             },
+             headers: auth_headers(@owner)
+
+        assert_response :created
+        body = JSON.parse(response.body)
+        assert body["data"]["image_thumb_url"].present?
+        recipe = Recipe.find_by_apikey!(body["data"]["id"])
+        assert recipe.image.attached?
+      end
+
+      test "update with remove_image purges the existing attachment" do
+        require "tempfile"
+        tf = Tempfile.new([ "existing", ".jpg" ]); tf.binmode; tf.write(SMALL_JPEG); tf.rewind
+        @recipe.image.attach(io: tf, filename: "existing.jpg", content_type: "image/jpeg")
+        assert @recipe.image.attached?, "setup precondition"
+
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: { recipe: { remove_image: "true" } },
+              headers: auth_headers(@owner)
+
+        assert_response :ok
+        body = JSON.parse(response.body)
+        assert_nil body["data"]["image_thumb_url"]
+        assert_nil body["data"]["image_detail_url"]
+        assert_not @recipe.reload.image.attached?
+      ensure
+        tf&.close!
+      end
+
+      test "update with both new image and remove_image=true keeps the new image" do
+        require "tempfile"
+        tf = Tempfile.new([ "old", ".jpg" ]); tf.binmode; tf.write(SMALL_JPEG); tf.rewind
+        @recipe.image.attach(io: tf, filename: "old.jpg", content_type: "image/jpeg")
+        old_blob_id = @recipe.image.blob.id
+
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: {
+                recipe: {
+                  image: upload_file(SMALL_JPEG, filename: "new.jpg", content_type: "image/jpeg"),
+                  remove_image: "true"
+                }
+              },
+              headers: auth_headers(@owner)
+
+        assert_response :ok
+        @recipe.reload
+        assert @recipe.image.attached?, "the new image should win"
+        assert_not_equal old_blob_id, @recipe.image.blob.id, "old blob should have been replaced"
+      ensure
+        tf&.close!
+      end
+
+      test "update rejects an oversize image and leaves the recipe unchanged" do
+        original_title = @recipe.title
+
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: {
+                recipe: {
+                  title: "Title that should not stick",
+                  image: upload_file("x" * (11 * 1024 * 1024), filename: "big.jpg", content_type: "image/jpeg")
+                }
+              },
+              headers: auth_headers(@owner)
+
+        assert_response :unprocessable_entity
+        @recipe.reload
+        assert_equal original_title, @recipe.title, "recipe attrs should not have persisted on validation failure"
+        assert_not @recipe.image.attached?
+      end
+
+      test "update rejects a non-image content type" do
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: {
+                recipe: {
+                  image: upload_file("hello", filename: "note.txt", content_type: "text/plain")
+                }
+              },
+              headers: auth_headers(@owner)
+
+        assert_response :unprocessable_entity
+        assert_not @recipe.reload.image.attached?
       end
 
       # --- Destroy ---

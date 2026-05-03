@@ -2,7 +2,7 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-3.md](../docs/plan/phases/phase-3.md)
+Current Phase: [phase-4.md](../docs/plan/phases/phase-4.md)
 Latest Weekly Report: [weekly-2026-W17.md](../docs/reports/weekly-2026-W17.md)
 Latest Daily Report: [daily-2026-04-29.md](../docs/reports/daily-2026-04-29.md)
 
@@ -12,16 +12,16 @@ Last Updated: 2026-05-03
 
 
 ## Current Focus
-**Phase 2 dev-verified. Commit + deploy next, then Phase 3 (upload UI — file source).** Today's smoke test caught a vips/mini_magick incompatibility (the stack switched to ImageMagick globally per user preference), two missed render surfaces, and a duplicate backend serializer that was the root cause of the missed-fields drift. All fixed; serializer extracted to `ApplicationController` as single source of truth. 308/308 backend tests pass. Working tree dirty pending commit.
+**Phase 3 dev-verified. Phase 4 (URL paste + share-copy deep-copy) up next.** Phase 3 ended up substantially restructured during the day: started with a separate `RecipeImagesController` + endpoint, but the UX surprise of "image change persists even if you hit Back" prompted a rewrite to fold the image into the recipes PATCH/POST as a multipart bundled payload. Picker became fully controlled (no internal API calls); RecipeForm holds an `ImageStaging` union and includes it in the save payload. New-recipe flow can now attach a photo upfront. Working tree dirty pending commit (Phase 2 deploy still also pending — combine into one push after Phase 4).
 
 ## Active Tasks
-- [NEXT] Commit + push + deploy Phase 2 (working tree currently dirty: variant processor switch, model variant options, serializer refactor, 2 frontend surface fixes)
+- [NEXT] Commit + push + deploy after Phase 4 — combined deploy for Phase 2 + 3 + 4
 - [NEXT] Verify last night's 3am cron ran successfully — `tail -20 ~/.garnish/backups/cron.log` on the Mac + `aws s3 ls s3://garnish-prod/db/` (LastModified should be after 03:00 of 2026-05-03)
-- [NEXT] Phase 3: Upload UI — file source (RecipeImagePicker component + multipart endpoint, plan: `docs/plan/phases/phase-3.md`). Starts after Phase 2 deploy.
+- [NEXT] Phase 4: URL paste + share-copy deep-copy. Plan: `docs/plan/phases/phase-4.md`. Reuses the multipart `recipe_params` + `:image` plumbing from Phase 3; adds a URL-paste tab and the `down`-based fetcher; deep-copies the attachment in `SharedRecipesController#copy` so blobs aren't shared across households.
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
-- [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
+- [NEXT] Follow-up: after deploying Phase 2/3/4, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
-- [NEXT] Investigate "reconnecting" overlay frequency on production — surfaced during today's work; turned out to be unrelated to the auto-store bug, but worth its own look. Candidates: CF Tunnel WS idle handling, indicator threshold flashing on single missed ping, auth-token refresh interaction
+- [NEXT] Investigate "reconnecting" overlay frequency on production — surfaced during 2026-04-30 work; turned out to be unrelated to the auto-store bug, but worth its own look. Candidates: CF Tunnel WS idle handling, indicator threshold flashing on single missed ping, auth-token refresh interaction
 
 ## Open Questions/Blockers
 - **Mobile cross-week swipe**: Swiping past Sunday/Monday on mobile single-day view doesn't advance the week. Desktop week nav buttons work. → **Addressed in Phase 3**.
@@ -97,6 +97,28 @@ Last Updated: 2026-05-03
   - **Worth remembering:** when adding fields to a payload, grep ALL controllers that emit recipe-shaped responses, not just the ones named in the plan. Same lesson on the frontend re: image_url usage. The duplication was the actual root cause of the surfaces drift
   - **Verification:** 308/308 backend tests pass with all three changes (processor swap + flattened options + extracted serializer); browser confirmed all 6 surfaces render after fixes
   - **Deviation from initial plan:** plan tech-stack table specified libvips; switched to ImageMagick globally based on user preference. Plan/runbook update bundled with deploy commit
+
+- [2026-05-03] Phase 3 (Upload UI — file source) — dev-verified, deploy pending Phase 4
+  - First pass shipped per the plan: standalone `RecipeImagesController` (`POST/DELETE /recipes/:apikey/image`), `RecipeImagePicker` component making API calls itself, immediate persist. 9 controller tests, all four manual flows working
+  - **Big mid-phase pivot driven by UX feedback.** User noticed: "if I remove an image and click Back, the image is still removed." The picker's immediate-persist semantics violated the form's "everything-tentative-until-Save" model. Pulled the thread and rewrote: the image now travels in the recipes PATCH/POST as a multipart bundled payload. Atomic save, Back actually undoes, ~150 lines of standalone controller + tests deleted. Net code is smaller and the UX is consistent
+  - **New shape:**
+    - Backend: `RecipesController#recipe_params` permits `:image` (UploadedFile) and `:remove_image` flag. `extract_recipe_params` splits the flag off; `update` honours it after save (purge if remove_image && no replacement). `NILIFY_BLANK` constant normalises empty strings to nil for nullable fields (FormData can't represent JSON null natively). `tags: []` empty-array marker `compact_blank`'d
+    - Frontend: `api/recipes.ts` introduces `ImageStaging = { kind: "none" } | { kind: "replace", file } | { kind: "remove" }`. `createRecipe`/`updateRecipe` send JSON when staging is none, FormData (with `appendNested` helper for Rails nested-params encoding) when there's an image change. Picker is fully controlled — receives `committedImageUrl` + `staging` + `onChange`, never makes API calls
+    - RecipeForm holds the staging state; submit calls `onSubmit(input, imageStaging)`. RecipeNew + RecipeEdit pass through to the mutation. Picker is now usable on the new-recipe flow (no more "save first to add a photo")
+  - **Cache invalidation gotcha:** initial implementation used `setQueryData(["recipe", apikey], res)` which didn't match RecipeDetail's actual key `["recipe", apikey, collectionApikey]`. Switched to `invalidateQueries({ queryKey: ["recipe", apikey] })` (partial-match) so detail page refetches on mount with fresh URLs. Also invalidates `["recipes"]`, `["smart-sections"]`, `["collections"]` when image changed
+  - **Picker UI iterated based on feedback:**
+    - Started with text-link "Undo" below the image — user noted it was hidden
+    - Moved Undo to a third pill button alongside Replace + X (top-right cluster on image, top-right overlay on placeholder when remove-staged)
+    - Simplified text from "Undo new photo (will apply on save)" to just "Undo" — the apply-on-save semantics are universal in the form, no need to repeat
+  - **Polish hit during verification (separate from Phase 3 core):**
+    - `RecipeCardCompact` images were stretching tall in the SmartBrowse carousels — `aspect-square` wasn't constraining height as expected. Switched to the same `paddingBottom: '100%'` + absolute-positioned IMG pattern that `RecipeCard` already uses for 4:3
+    - Mobile carousel left margin: `-mx-4 px-4` breakout pattern was making cards flush to the left edge on mobile. Dropped the breakout entirely; cards now align with the title/header. Tradeoff: last card cuts off at parent's right padding instead of bleeding past — visually cleaner
+    - `RecipeCard` row alignment in browse grid: cards in the same grid row weren't matching height because the inner `<motion.div>` and `<Link>` didn't have `h-full`, so they collapsed to content height inside the stretched grid cell. Added `h-full` to both. Cards in same row now match (CSS Grid default), cards in different rows can vary — natural variation per the user's preference (no forced whitespace)
+  - **Backend tests:** 6 new tests for bundled image (update with image, create with image, remove_image flag, both new image + remove_image, oversize, wrong type). Net: 308 → 314 passing (deleted 9 standalone controller tests, added 6 bundled). All 314 pass
+  - **Frontend:** build clean (real `tsc -b`), vitest 63/63
+  - **Worth remembering:** "atomic save semantics matter for forms with embedded media" — the original design had the right shape on paper but broke the form's mental model in practice. Letting the bundled-payload version replace it produced *less* code, not more
+  - **Worth remembering:** when adding a controller that needs request-context helpers like `serialize_recipe`, look for opportunities to extract to ApplicationController rather than calling `OtherController.new.send(:method, ...)` (the plan literally suggested the latter — recognised it as a smell mid-phase and went with the extraction instead)
+  - Plan reference: `docs/plan/phases/phase-3.md`. The plan doc now diverges from what shipped — the standalone-endpoint structure was retired; phase-3.md describes the original approach and reads as historical guidance
 
 ## Backlog (Out of Current Plan)
 Preserved from prior "Next Session" list; revisit after the current 4-phase plan ships:

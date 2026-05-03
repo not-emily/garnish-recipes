@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { getRecipe, updateRecipe } from "@/api/recipes";
+import { getRecipe, updateRecipe, type ImageStaging } from "@/api/recipes";
 import { RecipeForm } from "@/components/recipes/RecipeForm";
 import type { RecipeInput } from "@/types/recipe";
 
@@ -17,10 +17,18 @@ export function RecipeEdit() {
   });
 
   const mutation = useMutation({
-    mutationFn: (input: RecipeInput) => updateRecipe(apikey!, input),
-    onSuccess: (res) => {
+    mutationFn: ({ input, imageStaging }: { input: RecipeInput; imageStaging: ImageStaging }) =>
+      updateRecipe(apikey!, input, imageStaging),
+    onSuccess: (res, vars) => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.setQueryData(["recipe", apikey], res);
+      // Recipe detail key is `["recipe", apikey, collectionApikey]` — partial-match
+      // invalidate hits all variants so the detail page refetches on mount.
+      queryClient.invalidateQueries({ queryKey: ["recipe", apikey] });
+      // Image change touches multiple cache surfaces (browse cards, smart sections, collections).
+      if (vars.imageStaging.kind !== "none") {
+        queryClient.invalidateQueries({ queryKey: ["smart-sections"] });
+        queryClient.invalidateQueries({ queryKey: ["collections"] });
+      }
       navigate(`/recipes/${res.data.id}`);
     },
   });
@@ -51,8 +59,8 @@ export function RecipeEdit() {
         <RecipeForm
           recipeType={recipe.recipe_type}
           initial={recipe}
-          onSubmit={async (input) => {
-            await mutation.mutateAsync(input);
+          onSubmit={async (input, imageStaging) => {
+            await mutation.mutateAsync({ input, imageStaging });
           }}
           submitLabel="Save"
         />

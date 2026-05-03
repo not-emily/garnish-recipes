@@ -141,6 +141,16 @@ class ApplicationController < ActionController::API
     )
   end
 
+  def render_validation_errors(record)
+    render json: {
+      error: {
+        code: "validation_failed",
+        message: record.errors.full_messages.first,
+        details: record.errors.messages
+      }
+    }, status: :unprocessable_entity
+  end
+
   def authorization_message(result)
     case result[:reason]
     when :not_member
