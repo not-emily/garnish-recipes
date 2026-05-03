@@ -444,6 +444,112 @@ module Api
         assert_not @recipe.reload.image.attached?
       end
 
+      # --- Image via URL fetch (image_url_to_fetch) ---
+
+      def with_down_download(replacement)
+        original = Down.singleton_class.instance_method(:download)
+        Down.define_singleton_method(:download, replacement)
+        yield
+      ensure
+        Down.singleton_class.send(:define_method, :download, original)
+      end
+
+      def fake_image_tempfile(bytes, content_type:)
+        tf = Tempfile.new([ "fake-img", ".jpg" ])
+        tf.binmode
+        tf.write(bytes)
+        tf.rewind
+        tf.define_singleton_method(:content_type) { content_type }
+        tf
+      end
+
+      test "update with image_url_to_fetch fetches and attaches the image" do
+        tf = fake_image_tempfile(SMALL_JPEG, content_type: "image/jpeg")
+        with_down_download(->(*_args, **_kwargs) { tf }) do
+          patch "/api/v1/recipes/#{@recipe.apikey}",
+                params: {
+                  recipe: {
+                    title: "Stew from URL",
+                    image_url_to_fetch: "https://example.com/cookies.jpg"
+                  }
+                },
+                headers: auth_headers(@owner)
+
+          assert_response :ok
+          body = JSON.parse(response.body)
+          assert_equal "Stew from URL", body["data"]["title"]
+          assert body["data"]["image_thumb_url"].present?
+          assert @recipe.reload.image.attached?
+        end
+      end
+
+      test "update with image_url_to_fetch surfaces fetcher errors" do
+        with_down_download(->(*_args, **_kwargs) { raise Down::TooLarge.new("nope") }) do
+          patch "/api/v1/recipes/#{@recipe.apikey}",
+                params: {
+                  recipe: { image_url_to_fetch: "https://example.com/huge.jpg" }
+                },
+                headers: auth_headers(@owner)
+
+          assert_response :unprocessable_entity
+          body = JSON.parse(response.body)
+          assert_match(/under 10 MB/, body["error"]["message"])
+          assert_not @recipe.reload.image.attached?
+        end
+      end
+
+      test "update rejects non-http URL via fetcher (SSRF guard)" do
+        # No download stub needed — fetcher rejects on scheme check before any HTTP call.
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: { recipe: { image_url_to_fetch: "file:///etc/passwd" } },
+              headers: auth_headers(@owner)
+
+        assert_response :unprocessable_entity
+        body = JSON.parse(response.body)
+        assert_match(/http or https/, body["error"]["message"])
+      end
+
+      test "multipart image: wins when both image and image_url_to_fetch are sent" do
+        # If a real upload is attached, the URL fetch should be skipped entirely.
+        # Stub to fail loudly if the fetcher runs — proves we never even tried.
+        with_down_download(->(*_args, **_kwargs) { raise "should not be called" }) do
+          patch "/api/v1/recipes/#{@recipe.apikey}",
+                params: {
+                  recipe: {
+                    image: upload_file(SMALL_JPEG, filename: "from-file.jpg", content_type: "image/jpeg"),
+                    image_url_to_fetch: "https://example.com/from-url.jpg"
+                  }
+                },
+                headers: auth_headers(@owner)
+
+          assert_response :ok
+          assert @recipe.reload.image.attached?
+        end
+      end
+
+      test "create with image_url_to_fetch attaches on first save" do
+        tf = fake_image_tempfile(SMALL_JPEG, content_type: "image/jpeg")
+        with_down_download(->(*_args, **_kwargs) { tf }) do
+          post "/api/v1/recipes",
+               params: {
+                 recipe: {
+                   recipe_type: "full",
+                   title: "URL-pasted",
+                   category: "entree",
+                   servings: 2,
+                   image_url_to_fetch: "https://example.com/img.jpg"
+                 }
+               },
+               headers: auth_headers(@owner)
+
+          assert_response :created
+          body = JSON.parse(response.body)
+          assert body["data"]["image_thumb_url"].present?
+          recipe = Recipe.find_by_apikey!(body["data"]["id"])
+          assert recipe.image.attached?
+        end
+      end
+
       # --- Destroy ---
 
       test "owner can delete a recipe" do

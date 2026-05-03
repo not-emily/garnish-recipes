@@ -67,6 +67,28 @@ module Api
         )
 
         if copy.save
+          # Deep-copy the ActiveStorage attachment if present. Use io: with
+          # downloaded bytes rather than .attach(source.image.blob) — sharing
+          # a Blob across attachments breaks on purge cascade (deleting one
+          # household's recipe would nuke the bytes for the other). Independent
+          # blob ownership per household is the only safe model.
+          #
+          # Outside the save() check on purpose: if the attachment download
+          # fails (e.g., R2 transient), the recipe still exists and the user
+          # can re-add the image manually. Wrapping in a transaction would
+          # discard the recipe save on a flaky storage backend — worse UX.
+          if source.image.attached?
+            begin
+              copy.image.attach(
+                io: StringIO.new(source.image.download),
+                filename: source.image.filename.to_s,
+                content_type: source.image.content_type
+              )
+            rescue StandardError => e
+              Rails.logger.warn("Share-copy image clone failed for recipe #{source.id} -> #{copy.id}: #{e.message}")
+            end
+          end
+
           render json: { data: { id: copy.apikey, title: copy.title } }, status: :created
         else
           render json: {

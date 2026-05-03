@@ -24,6 +24,10 @@ gem "sage-rb", "~> 0.1"
 gem "aws-sdk-s3", "~> 1.150", require: false
 gem "image_processing", "~> 1.13"
 
+# Robust image fetching for URL paste (redirects, content-type sniffing,
+# size limits, timeouts). Used by ImageUrlFetcher service.
+gem "down", "~> 5.4"
+
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 

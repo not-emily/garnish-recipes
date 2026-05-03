@@ -86,11 +86,19 @@ module Api
 
       # POST /api/v1/recipes
       def create
-        attrs, _remove_image = extract_recipe_params
-        recipe = Current.household.recipes.build(attrs)
+        attrs, _remove_image, fetch_error = extract_recipe_params
+
+        recipe = Current.household.recipes.build(attrs.except(:image))
         recipe.contributed_by = current_user
 
         return unless authorize!(recipe)
+
+        if fetch_error
+          recipe.errors.add(:image, fetch_error)
+          return render_validation_errors(recipe)
+        end
+
+        recipe.image = attrs[:image] if attrs.key?(:image)
 
         if recipe.save
           render json: { data: serialize_recipe(recipe, full: true) }, status: :created
@@ -103,7 +111,12 @@ module Api
       def update
         return unless authorize!(@recipe)
 
-        attrs, remove_image = extract_recipe_params
+        attrs, remove_image, fetch_error = extract_recipe_params
+
+        if fetch_error
+          @recipe.errors.add(:image, fetch_error)
+          return render_validation_errors(@recipe)
+        end
 
         if @recipe.update(attrs)
           # Honour `remove_image: true` only when no new image was also passed —
@@ -211,7 +224,7 @@ module Api
           :recipe_type, :title, :description, :category, :cuisine,
           :primary_protein, :prep_time_minutes, :cook_time_minutes,
           :difficulty, :servings, :source_url, :notes, :image_url,
-          :image, :remove_image,
+          :image, :remove_image, :image_url_to_fetch,
           tags: [],
           ingredient_groups: [
             :label,
@@ -238,13 +251,38 @@ module Api
         permitted
       end
 
-      # Splits `remove_image` off from the standard recipe attributes — it's
-      # a controller-level intent, not a model attribute.
+      # Splits controller-level intents off from the standard recipe attributes:
+      #   - `remove_image: true` — purge the existing attachment
+      #   - `image_url_to_fetch: "https://..."` — server fetches the URL,
+      #     attaches the resulting bytes (treated as if the user had uploaded a
+      #     file). Multipart `image:` upload wins if both are present.
+      #
+      # Returns [attrs, remove_image, fetch_error]. fetch_error is a user-facing
+      # string when the URL fetch failed; caller should surface it via
+      # render_validation_errors without saving anything.
       def extract_recipe_params
         perm = recipe_params
+
         flag = perm.delete(:remove_image)
         remove_image = [ true, "true", "1", 1 ].include?(flag)
-        [ perm, remove_image ]
+
+        fetch_url = perm.delete(:image_url_to_fetch)
+        fetch_error = nil
+
+        if fetch_url.present? && !perm.key?(:image)
+          result = ImageUrlFetcher.fetch(fetch_url)
+          if result.error
+            fetch_error = result.error
+          else
+            perm[:image] = ActionDispatch::Http::UploadedFile.new(
+              tempfile: result.tempfile,
+              filename: result.filename,
+              type: result.content_type
+            )
+          end
+        end
+
+        [ perm, remove_image, fetch_error ]
       end
 
       def filter_scope(scope)

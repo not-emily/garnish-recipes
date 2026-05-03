@@ -38,6 +38,7 @@ export function getRecipe(apikey: string, collectionApikey?: string) {
 export type ImageStaging =
   | { kind: "none" }
   | { kind: "replace"; file: File }
+  | { kind: "replace_url"; url: string }
   | { kind: "remove" };
 
 export function createRecipe(input: RecipeInput, imageStaging: ImageStaging = { kind: "none" }) {
@@ -81,6 +82,8 @@ function buildRecipeFormData(input: Partial<RecipeInput>, imageStaging: ImageSta
   appendNested(fd, "recipe", input);
   if (imageStaging.kind === "replace") {
     fd.append("recipe[image]", imageStaging.file);
+  } else if (imageStaging.kind === "replace_url") {
+    fd.append("recipe[image_url_to_fetch]", imageStaging.url);
   } else if (imageStaging.kind === "remove") {
     fd.append("recipe[remove_image]", "true");
   }
@@ -92,8 +95,16 @@ function buildRecipeFormData(input: Partial<RecipeInput>, imageStaging: ImageSta
 //   { tags: [] }                         → tags[]=""  (controller compacts)
 //   { ingredient_groups: [{ label: x }]} → ingredient_groups[0][label]=x
 //   { description: null }                → description=""  (controller nils blanks)
+//   { ingredient_groups: undefined }     → omitted entirely (no key emitted)
+//
+// undefined means "field not specified for this recipe type" (e.g. quick_meal
+// has no ingredient_groups). Sending `key=""` for those would coerce arrays
+// into strings on the Rails side and trip type validations. null is different:
+// it means "user explicitly cleared a nullable scalar" — those go out as ""
+// and the controller's NILIFY_BLANK normaliser maps them back to nil.
 function appendNested(fd: FormData, key: string, value: unknown): void {
-  if (value === null || value === undefined) {
+  if (value === undefined) return;
+  if (value === null) {
     fd.append(key, "");
     return;
   }

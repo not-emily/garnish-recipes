@@ -129,6 +129,49 @@ module Api
 
         assert_response :precondition_required
       end
+
+      # --- copy with image attachment ---
+
+      SMALL_JPEG_BYTES = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xFF\xD9".b.freeze unless defined?(SMALL_JPEG_BYTES)
+
+      test "copy deep-copies the source attachment as an independent blob" do
+        require "tempfile"
+        tf = Tempfile.new([ "src", ".jpg" ]); tf.binmode; tf.write(SMALL_JPEG_BYTES); tf.rewind
+        @recipe.image.attach(io: tf, filename: "src.jpg", content_type: "image/jpeg")
+        assert @recipe.image.attached?
+        source_blob_id = @recipe.image.blob.id
+        source_bytes = @recipe.image.download
+
+        post "/api/v1/shared_recipes/#{@recipe.share_token}/copy",
+             headers: auth_headers(@recipient)
+
+        assert_response :created
+        body = JSON.parse(response.body)
+        copy = Recipe.find_by_apikey!(body["data"]["id"])
+
+        assert copy.image.attached?, "expected the copy to have its own attachment"
+        assert_not_equal source_blob_id, copy.image.blob.id, "expected a fresh blob (not a shared reference)"
+        assert_equal source_bytes, copy.image.download, "copy bytes should match source bytes"
+
+        # Independence check: purging the source should not affect the copy
+        @recipe.image.purge
+        copy.reload
+        assert copy.image.attached?, "copy survives source's purge"
+      ensure
+        tf&.close!
+      end
+
+      test "copy without a source attachment leaves the copy without an attachment" do
+        assert_not @recipe.image.attached?, "setup precondition: no attachment on source"
+
+        post "/api/v1/shared_recipes/#{@recipe.share_token}/copy",
+             headers: auth_headers(@recipient)
+
+        assert_response :created
+        body = JSON.parse(response.body)
+        copy = Recipe.find_by_apikey!(body["data"]["id"])
+        assert_not copy.image.attached?
+      end
     end
   end
 end
