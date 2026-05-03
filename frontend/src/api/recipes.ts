@@ -90,18 +90,20 @@ function buildRecipeFormData(input: Partial<RecipeInput>, imageStaging: ImageSta
   return fd;
 }
 
-// Encodes a JS value in Rails' nested-params multipart notation:
-//   { tags: ["a", "b"] }                 → tags[]=a, tags[]=b
-//   { tags: [] }                         → tags[]=""  (controller compacts)
-//   { ingredient_groups: [{ label: x }]} → ingredient_groups[0][label]=x
-//   { description: null }                → description=""  (controller nils blanks)
-//   { ingredient_groups: undefined }     → omitted entirely (no key emitted)
+// Encodes a JS value in Rails' nested-params multipart notation.
 //
-// undefined means "field not specified for this recipe type" (e.g. quick_meal
-// has no ingredient_groups). Sending `key=""` for those would coerce arrays
-// into strings on the Rails side and trip type validations. null is different:
-// it means "user explicitly cleared a nullable scalar" — those go out as ""
-// and the controller's NILIFY_BLANK normaliser maps them back to nil.
+// Subtleties:
+//  - undefined → omit the key entirely (means "field not specified", e.g.
+//    quick_meal recipes have no ingredient_groups)
+//  - null → emit "" (user explicitly cleared a nullable scalar; backend
+//    NILIFY_BLANK normaliser maps blanks back to nil)
+//  - Array of primitives ([]) → use Rack's `[]` notation (`tags[]=foo`)
+//  - Array of objects → JSON-encode as a single string. Rack's
+//    `parse_nested_query` treats `foo[0][bar]=baz` as a *hash* with key "0",
+//    not an array element. There's no clean form-data way to express
+//    "array of objects with multiple fields each", so we ship JSON instead
+//    and the controller decodes it.
+//  - Object → recurse with `[key]` suffix (Rack handles object nesting fine)
 function appendNested(fd: FormData, key: string, value: unknown): void {
   if (value === undefined) return;
   if (value === null) {
@@ -117,12 +119,15 @@ function appendNested(fd: FormData, key: string, value: unknown): void {
       fd.append(`${key}[]`, "");
       return;
     }
-    value.forEach((item, i) => {
-      if (item !== null && typeof item === "object" && !(item instanceof Blob)) {
-        appendNested(fd, `${key}[${i}]`, item);
-      } else {
-        appendNested(fd, `${key}[]`, item);
-      }
+    const head = value[0];
+    const isArrayOfObjects =
+      head !== null && typeof head === "object" && !(head instanceof Blob);
+    if (isArrayOfObjects) {
+      fd.append(key, JSON.stringify(value));
+      return;
+    }
+    value.forEach((item) => {
+      fd.append(`${key}[]`, item == null ? "" : String(item));
     });
     return;
   }

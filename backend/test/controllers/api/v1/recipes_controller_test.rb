@@ -351,6 +351,46 @@ module Api
         assert @recipe.reload.image.attached?
       end
 
+      test "update with bundled image preserves multi-ingredient ingredient_groups (Rack parses [0] as hash, frontend ships JSON)" do
+        # Regression: when the FormData path runs, the frontend JSON-encodes
+        # ingredient_groups + instructions to dodge Rack's
+        # `recipe[ingredient_groups][0][...]` → hash-with-"0"-key parsing.
+        # The controller decodes the JSON strings before strong params.
+        groups = [
+          {
+            "label" => "Cookies",
+            "ingredients" => [
+              { "name" => "brown sugar", "unit" => "cup", "quantity" => "1" },
+              { "name" => "butter",       "unit" => "cup", "quantity" => "0.5" }
+            ]
+          }
+        ]
+        steps = [
+          { "step" => 1, "text" => "Cream butter and sugar" },
+          { "step" => 2, "text" => "Bake until golden" }
+        ]
+
+        patch "/api/v1/recipes/#{@recipe.apikey}",
+              params: {
+                recipe: {
+                  title: "Cookies with photo",
+                  ingredient_groups: groups.to_json,
+                  instructions: steps.to_json,
+                  image: upload_file(SMALL_JPEG, filename: "c.jpg", content_type: "image/jpeg")
+                }
+              },
+              headers: auth_headers(@owner)
+
+        assert_response :ok
+        @recipe.reload
+        assert_equal "Cookies with photo", @recipe.title
+        assert_equal 1, @recipe.ingredient_groups.length
+        assert_equal 2, @recipe.ingredient_groups.first["ingredients"].length
+        assert_equal "brown sugar", @recipe.ingredient_groups.first["ingredients"].first["name"]
+        assert_equal 2, @recipe.instructions.length
+        assert @recipe.image.attached?
+      end
+
       test "create with bundled image attaches on first save" do
         post "/api/v1/recipes",
              params: {

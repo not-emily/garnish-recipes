@@ -219,7 +219,16 @@ module Api
       # Normalising here keeps both paths equivalent.
       NILIFY_BLANK = %i[description category cuisine primary_protein difficulty source_url image_url notes].freeze
 
+      # Array-of-object fields that the FormData path delivers as a single
+      # JSON-encoded string. Rack's nested-params parser treats
+      # `foo[0][bar]=baz` as a hash (`{"0" => {...}}`), not an array element,
+      # so the frontend ships these as JSON strings instead and we decode
+      # before strong params runs.
+      JSON_ARRAY_FIELDS = %i[ingredient_groups instructions].freeze
+
       def recipe_params
+        decode_json_array_fields(params[:recipe]) if params[:recipe].present?
+
         permitted = params.require(:recipe).permit(
           :recipe_type, :title, :description, :category, :cuisine,
           :primary_protein, :prep_time_minutes, :cook_time_minutes,
@@ -249,6 +258,23 @@ module Api
           permitted[:instructions] = permitted[:instructions].map(&:to_h)
         end
         permitted
+      end
+
+      # When the FormData path is used, array-of-object fields arrive as JSON
+      # strings (see frontend `appendNested` for the why). Decode them in
+      # place on the params hash before strong-params runs. JSON-only callers
+      # send these as native arrays/hashes and pass through untouched.
+      def decode_json_array_fields(recipe_params_input)
+        JSON_ARRAY_FIELDS.each do |key|
+          val = recipe_params_input[key]
+          next unless val.is_a?(String)
+          begin
+            parsed = JSON.parse(val)
+          rescue JSON::ParserError
+            next # Leave it; strong params or model validation will surface the issue.
+          end
+          recipe_params_input[key] = parsed
+        end
       end
 
       # Splits controller-level intents off from the standard recipe attributes:
