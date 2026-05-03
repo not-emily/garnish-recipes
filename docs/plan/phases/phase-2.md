@@ -86,7 +86,7 @@ end
 - `resize_to_fit` preserves aspect ratio (variant won't be exactly 600×450 — may be smaller in one dimension). That's intentional — CSS `object-cover` handles visual cropping consistently across surfaces. `resize_to_fill` would crop server-side; we don't want that.
 - `strip: true` removes EXIF metadata (orientation, GPS, camera info). Privacy + smaller file size. Note: stripping EXIF can lose orientation data — image_processing's `auto_orient` is on by default, so the rotated bitmap is what gets stored. Verify on iPhone portrait shots.
 - `image.purge` inside the validator deletes the failed upload immediately (don't leave orphan blobs in R2). The order matters: purge first, then add error.
-- HEIC support depends on libvips compiled with HEIF support. On macOS via `brew install vips`, HEIF is included. If a HEIC upload fails with libvips error, fall back to rejecting HEIC and asking the user to convert.
+- HEIC support depends on ImageMagick compiled with HEIF delegates. On macOS via `brew install imagemagick`, HEIF is included by default; on Arch `pacman -S imagemagick` does the same. If a HEIC upload fails with a "no decode delegate" error, fall back to rejecting HEIC and asking the user to convert.
 
 ### 2.2 Recipe serializer
 

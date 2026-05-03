@@ -1,3 +1,5 @@
+Rails.application.config.active_storage.variant_processor = :mini_magick
+
 # Set long-lived Cache-Control on ActiveStorage proxy responses so Cloudflare
 # caches at the edge after the first hit. Safe to mark `immutable` because
 # blob URLs are signed with `signed_id` — the URL changes if the underlying

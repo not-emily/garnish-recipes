@@ -99,9 +99,9 @@ export function AddRecipesModal({
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50 disabled:opacity-60"
                   >
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-garnish-50 to-garnish-100">
-                      {recipe.image_url ? (
+                      {(recipe.image_thumb_url ?? recipe.image_url) ? (
                         <img
-                          src={recipe.image_url}
+                          src={recipe.image_thumb_url ?? recipe.image_url ?? ""}
                           alt=""
                           className="h-full w-full object-cover"
                         />

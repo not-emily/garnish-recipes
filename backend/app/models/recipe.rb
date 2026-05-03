@@ -35,8 +35,8 @@ class Recipe < ApplicationRecord
   IMAGE_MAX_SIZE = 10.megabytes
 
   has_one_attached :image do |attachable|
-    attachable.variant :thumb,  resize_to_fit: [ 600, 450 ],  saver: { strip: true, quality: 85 }
-    attachable.variant :detail, resize_to_fit: [ 1200, 900 ], saver: { strip: true, quality: 88 }
+    attachable.variant :thumb,  resize_to_fit: [ 600, 450 ],  strip: true, quality: 85
+    attachable.variant :detail, resize_to_fit: [ 1200, 900 ], strip: true, quality: 88
   end
 
   validate :image_size_within_limit

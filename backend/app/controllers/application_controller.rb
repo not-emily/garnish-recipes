@@ -89,6 +89,58 @@ class ApplicationController < ActionController::API
     )
   end
 
+  # Shared recipe serializer used by RecipesController, CollectionsController,
+  # and any other controller that returns recipe payloads. The `full:` branch
+  # adds fields only relevant to the single-recipe show endpoint (notes,
+  # ingredient_groups, instructions, share metadata, viewer's rating).
+  # Public/anonymous serialization (signed-out share view) lives in
+  # SharedRecipesController#serialize_public_recipe — that one omits
+  # household-internal fields by design.
+  def serialize_recipe(recipe, full: false)
+    base = {
+      id: recipe.apikey,
+      recipe_type: recipe.recipe_type,
+      title: recipe.title,
+      description: recipe.description,
+      category: recipe.category,
+      cuisine: recipe.cuisine,
+      tags: recipe.tags,
+      primary_protein: recipe.primary_protein,
+      prep_time_minutes: recipe.prep_time_minutes,
+      cook_time_minutes: recipe.cook_time_minutes,
+      total_time_minutes: recipe.total_time_minutes,
+      difficulty: recipe.difficulty,
+      servings: recipe.servings,
+      image_url: recipe.image_url,
+      image_thumb_url: attachment_variant_url(recipe.image, :thumb),
+      image_detail_url: attachment_variant_url(recipe.image, :detail),
+      times_cooked: recipe.times_cooked,
+      last_cooked_at: recipe.last_cooked_at,
+      average_rating: recipe.average_rating&.to_f,
+      rating_count: recipe.rating_count,
+      updated_at: recipe.updated_at
+    }
+    return base unless full
+
+    base.merge(
+      source_url: recipe.source_url,
+      notes: recipe.notes,
+      ingredient_groups: recipe.ingredient_groups,
+      instructions: recipe.instructions,
+      import_status: recipe.import_status,
+      import_source_type: recipe.import_source_type,
+      import_error: recipe.import_error,
+      my_rating: recipe.recipe_ratings.find_by(user: current_user)&.score,
+      share_token: recipe.share_token,
+      share_url: recipe.share_token.present? ?
+        "#{ENV.fetch('FRONTEND_URL')}/r/shared/#{recipe.share_token}" : nil,
+      contributed_by: {
+        id: recipe.contributed_by.apikey,
+        name: recipe.contributed_by.name
+      }
+    )
+  end
+
   def authorization_message(result)
     case result[:reason]
     when :not_member

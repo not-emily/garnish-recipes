@@ -206,32 +206,8 @@ module Api
                     .includes(:contributed_by)
 
         base.merge(
-          recipes: recipes.map { |r| serialize_recipe_summary(r) }
+          recipes: recipes.map { |r| serialize_recipe(r) }
         )
-      end
-
-      def serialize_recipe_summary(recipe)
-        {
-          id: recipe.apikey,
-          recipe_type: recipe.recipe_type,
-          title: recipe.title,
-          description: recipe.description,
-          category: recipe.category,
-          cuisine: recipe.cuisine,
-          tags: recipe.tags,
-          primary_protein: recipe.primary_protein,
-          prep_time_minutes: recipe.prep_time_minutes,
-          cook_time_minutes: recipe.cook_time_minutes,
-          total_time_minutes: recipe.total_time_minutes,
-          difficulty: recipe.difficulty,
-          servings: recipe.servings,
-          image_url: recipe.image_url,
-          times_cooked: recipe.times_cooked,
-          last_cooked_at: recipe.last_cooked_at,
-          average_rating: recipe.average_rating&.to_f,
-          rating_count: recipe.rating_count,
-          updated_at: recipe.updated_at
-        }
       end
 
       def serialize_recipe_export(recipe)

@@ -194,7 +194,7 @@ DELETE /api/v1/recipes/:id/image
 | Category | Choice | Notes |
 |----------|--------|-------|
 | Object storage | Cloudflare R2 | Free tier: 10 GB, $0 egress. S3-compatible. |
-| Image processing | `image_processing ~> 1.13` | Already in Gemfile. Uses libvips (already on Mac via Postgres.app or brew). |
+| Image processing | `image_processing ~> 1.13` with `mini_magick` backend | Already in Gemfile. Uses ImageMagick (`brew install imagemagick` on macOS, `pacman -S imagemagick` on Arch). Configured globally via `Rails.application.config.active_storage.variant_processor = :mini_magick`. |
 | AWS SDK | `aws-sdk-s3 ~> 1.150` | Already in Gemfile. Used by ActiveStorage S3 adapter. |
 | HTTP fetching | `down ~> 5.4` | New: robust URL fetching with redirect handling, content-type sniffing, max-size enforcement. |
 | CLI for backups | `aws-cli` | New: `brew install awscli` on prod Mac. |

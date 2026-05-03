@@ -2,32 +2,22 @@
 
 ## Plan Files
 Roadmap: [plan.md](../docs/plan/plan.md)
-Current Phase: [phase-2.md](../docs/plan/phases/phase-2.md)
+Current Phase: [phase-3.md](../docs/plan/phases/phase-3.md)
 Latest Weekly Report: [weekly-2026-W17.md](../docs/reports/weekly-2026-W17.md)
 Latest Daily Report: [daily-2026-04-29.md](../docs/reports/daily-2026-04-29.md)
 
 Previously: [_archived/v4-fraction-support](../docs/plan/_archived/v4-fraction-support/) — Fraction support for ingredient quantities (1 phase, shipped 2026-04-29). Earlier: [v3-post-mvp-1](../docs/plan/_archived/v3-post-mvp-1/) — Stabilization, Polish & Sharing (2026-04-22 → 2026-04-24).
 
-Last Updated: 2026-04-30
+Last Updated: 2026-05-03
 
 
 ## Current Focus
-**Phase 2 substantively done in dev — manual smoke test pending tomorrow before deploy.** Recipe model has `has_one_attached :image` with thumb + detail variants, serializers output hybrid URLs (attachment > image_url string > null), all four display surfaces wired (incl. filling the SharedRecipe hero gap). Backend tests + frontend build clean. Local end-to-end pipeline confirmed via `bin/rails runner` smoke. Not yet pushed/deployed — testing in dev first.
-
-Phase 3 (upload UI — file source) starts after tomorrow's verification.
+**Phase 2 dev-verified. Commit + deploy next, then Phase 3 (upload UI — file source).** Today's smoke test caught a vips/mini_magick incompatibility (the stack switched to ImageMagick globally per user preference), two missed render surfaces, and a duplicate backend serializer that was the root cause of the missed-fields drift. All fixed; serializer extracted to `ApplicationController` as single source of truth. 308/308 backend tests pass. Working tree dirty pending commit.
 
 ## Active Tasks
-- [IN PROGRESS] Phase 2: Recipe model + image display
-  - ✓ Model: `has_one_attached :image` + `thumb` (600x450) + `detail` (1200x900) variants + 10MB cap + content-type allowlist (jpeg/png/webp/heic) + purge-on-reject validators
-  - ✓ Serializers (recipes + shared_recipes) emit `image_thumb_url` + `image_detail_url` via shared `attachment_variant_url` helper in ApplicationController
-  - ✓ ActiveStorage proxy controllers patched with `Cache-Control: public, max-age=31536000, immutable` so CF caches at edge
-  - ✓ Frontend types + 4 display surfaces with attachment-first fallback chain (RecipeCard, RecipeCardCompact, RecipeDetail, SharedRecipe — last one was missing a hero entirely; now added)
-  - ✓ Backend tests: 5 model + 2 serializer cases. 308/308 backend tests pass overall
-  - ✓ Frontend build clean (real `tsc -b`); vitest 63/63
-  - ✓ Local smoke test via `bin/rails runner`: attach succeeds, variant URL signed correctly through proxy route
-  - ⏭ **Tomorrow morning manual test in dev:** start Rails locally → attach an image to a recipe via console → visit /recipes/:id in browser → confirm RecipeDetail hero renders. Repeat for shared link + browse cards. Then push + deploy
-- [NEXT] Tomorrow morning: verify last night's 3am cron ran successfully — `tail -20 ~/.garnish/backups/cron.log` on the Mac, plus `aws s3 ls s3://garnish-prod/db/` should show LastModified > 03:00 today
-- [NEXT] Phase 3: Upload UI — file source (RecipeImagePicker component + multipart endpoint, plan: `docs/plan/phases/phase-3.md`). Starts after Phase 2 verification.
+- [NEXT] Commit + push + deploy Phase 2 (working tree currently dirty: variant processor switch, model variant options, serializer refactor, 2 frontend surface fixes)
+- [NEXT] Verify last night's 3am cron ran successfully — `tail -20 ~/.garnish/backups/cron.log` on the Mac + `aws s3 ls s3://garnish-prod/db/` (LastModified should be after 03:00 of 2026-05-03)
+- [NEXT] Phase 3: Upload UI — file source (RecipeImagePicker component + multipart endpoint, plan: `docs/plan/phases/phase-3.md`). Starts after Phase 2 deploy.
 - [NEXT] Follow-up: broader mutation-button audit — migrate meal plan, import, and collection mutations to `useOptimisticMutation` + `MutationButton` for consistent pending/error UX (not blocking; current ones are functional)
 - [NEXT] Follow-up: after deploying Phase 2, run `scripts/check-health.sh` against the server to baseline pool/memory/cable counts under normal load; revisit Puma/pool sizing if the numbers suggest different constraints than expected
 - [NEXT] Follow-up: real-device verification of Phase 3D iOS input zoom fix on iPhone (Safari + PWA)
@@ -93,6 +83,20 @@ Phase 3 (upload UI — file source) starts after tomorrow's verification.
   - **Discovery during testing (more interesting):** `attach()` on a persisted record triggers an internal save that fires the model's validators. When a validator rejects, `attach()` returns `nil`, the attachment is purged in the validator, and nothing persists. Tests assert this observable behavior (`assert_nil result`, `assert_not attached?`) rather than fighting it via `record.save` afterwards
   - **Verification:** 308/308 backend tests (was 303; +5 model + 2 serializer), real `tsc -b` build clean, vitest 63/63, end-to-end smoke via `bin/rails runner` — variant URL signed and routes through proxy correctly
   - Plan reference: `docs/plan/phases/phase-2.md`
+
+- [2026-05-03] Phase 2 dev verification + fixes (commit/deploy still pending)
+  - Browser smoke test confirmed all 4 originally-planned surfaces: RecipeDetail hero, RecipeCard browse-page thumb, RecipeCardCompact (SmartBrowse carousels at top of /recipes), SharedRecipe public hero
+  - **Variant processor switched libvips → ImageMagick (mini_magick)** in `config/initializers/active_storage.rb` — user preference; prod Mac already has `imagemagick` installed via brew. Aligns dev (Arch) and prod (macOS) on the same processor; previously plan called for libvips, but neither dev nor prod had a hard dependency on it yet
+  - **Variant options flattened**: `saver: { strip: true, quality: 85 }` is vips-specific and crashed on mini_magick (`UnsupportedImageProcessingMethod: saver.`). Changed `recipe.rb:38-39` to flat `strip: true, quality: 85` which both backends accept. Variation digest changes → existing variant_records are stale but harmless; new variants regenerate lazily on first hit
+  - **2 missed render surfaces** caught by `grep image_url` audit across components (the original Phase 2 plan named 4 surfaces; reality was 6):
+    - `EntryPicker.tsx:324` (meal plan recipe search picker, 40×40 thumb)
+    - `AddRecipesModal.tsx:102` (collection's "Add Recipes" picker, 40×40 thumb)
+    - Both wired with `(image_thumb_url ?? image_url) ?? ""` fallback chain matching existing convention. `LeftoverTray.tsx` and `MealPlan.tsx` declare the type but don't render thumbs, no fix needed
+  - **Backend serializer drift caught** (this was the most interesting find): collection detail page renders via `RecipeCard`, which already had the fallback chain. Yet recipes in collections still showed the C letter. Root cause: `CollectionsController#serialize_recipe_summary` was a *duplicate* of `RecipesController#serialize_recipe` and Phase 2 had only updated one. Two payload paths, same shape on the surface, drifted on the new fields
+  - **Refactor: extracted `serialize_recipe` to `ApplicationController`** as single source of truth. `CollectionsController` now calls the shared method; `serialize_recipe_summary` deleted. `SharedRecipesController#serialize_public_recipe` left alone — legitimately different (anonymous public payload, no household-internal fields like `my_rating`/`share_token`)
+  - **Worth remembering:** when adding fields to a payload, grep ALL controllers that emit recipe-shaped responses, not just the ones named in the plan. Same lesson on the frontend re: image_url usage. The duplication was the actual root cause of the surfaces drift
+  - **Verification:** 308/308 backend tests pass with all three changes (processor swap + flattened options + extracted serializer); browser confirmed all 6 surfaces render after fixes
+  - **Deviation from initial plan:** plan tech-stack table specified libvips; switched to ImageMagick globally based on user preference. Plan/runbook update bundled with deploy commit
 
 ## Backlog (Out of Current Plan)
 Preserved from prior "Next Session" list; revisit after the current 4-phase plan ships:
