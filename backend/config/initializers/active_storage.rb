@@ -1,17 +1,16 @@
 Rails.application.config.active_storage.variant_processor = :mini_magick
 
-# Tell mini_magick where ImageMagick's `convert` lives. Production runs
-# under launchd, which inherits a minimal PATH that excludes /usr/local/bin
-# (Intel Macs) and /opt/homebrew/bin (Apple Silicon). Without this, every
-# variant generation 500s with "executable not found: convert" (status 127).
-# On Arch dev machines /usr/bin is always on PATH, so the fallback to
-# default PATH lookup kicks in there.
-require "mini_magick"
+# Make sure ImageMagick's `convert` is on PATH for the Rails process.
+# Production runs Puma under launchd, whose inherited PATH doesn't include
+# /usr/local/bin (Intel Macs) or /opt/homebrew/bin (Apple Silicon), so
+# mini_magick's PATH-lookup fails with status 127 and every variant URL
+# 500s. mini_magick 5.x has no cli_path setter, so we prepend the
+# directory to the process's PATH directly. On Arch dev machines /usr/bin
+# is always present and we skip the prepend.
 %w[/usr/local/bin /opt/homebrew/bin].each do |dir|
-  if File.executable?(File.join(dir, "convert"))
-    MiniMagick.cli_path = dir
-    break
-  end
+  next unless File.executable?(File.join(dir, "convert"))
+  ENV["PATH"] = "#{dir}:#{ENV['PATH']}" unless ENV["PATH"].to_s.split(":").include?(dir)
+  break
 end
 
 # Set long-lived Cache-Control on ActiveStorage proxy responses so Cloudflare
