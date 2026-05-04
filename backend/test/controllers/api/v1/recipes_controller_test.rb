@@ -351,6 +351,44 @@ module Api
         assert @recipe.reload.image.attached?
       end
 
+      test "update with bundled image enqueues WarmRecipeImageVariantsJob" do
+        # The project's default queue adapter is GoodJob; ActiveJob's
+        # `assert_enqueued_with` requires the :test adapter. Swap for the
+        # duration of the assertion.
+        original_adapter = ActiveJob::Base.queue_adapter
+        ActiveJob::Base.queue_adapter = :test
+        WarmRecipeImageVariantsJob.queue_adapter = ActiveJob::Base.queue_adapter
+
+        assert_enqueued_with(job: WarmRecipeImageVariantsJob, args: [ @recipe.id ]) do
+          patch "/api/v1/recipes/#{@recipe.apikey}",
+                params: {
+                  recipe: {
+                    image: upload_file(SMALL_JPEG, filename: "warm.jpg", content_type: "image/jpeg")
+                  }
+                },
+                headers: auth_headers(@owner)
+        end
+      ensure
+        ActiveJob::Base.queue_adapter = original_adapter if original_adapter
+        WarmRecipeImageVariantsJob.queue_adapter = original_adapter if original_adapter
+      end
+
+      test "update without an image change does not enqueue WarmRecipeImageVariantsJob" do
+        original_adapter = ActiveJob::Base.queue_adapter
+        ActiveJob::Base.queue_adapter = :test
+        WarmRecipeImageVariantsJob.queue_adapter = ActiveJob::Base.queue_adapter
+
+        assert_no_enqueued_jobs(only: WarmRecipeImageVariantsJob) do
+          patch "/api/v1/recipes/#{@recipe.apikey}",
+                params: { recipe: { title: "Just a title change" } },
+                headers: auth_headers(@owner),
+                as: :json
+        end
+      ensure
+        ActiveJob::Base.queue_adapter = original_adapter if original_adapter
+        WarmRecipeImageVariantsJob.queue_adapter = original_adapter if original_adapter
+      end
+
       test "update with bundled image preserves multi-ingredient ingredient_groups (Rack parses [0] as hash, frontend ships JSON)" do
         # Regression: when the FormData path runs, the frontend JSON-encodes
         # ingredient_groups + instructions to dodge Rack's

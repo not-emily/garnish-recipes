@@ -101,6 +101,7 @@ module Api
         recipe.image = attrs[:image] if attrs.key?(:image)
 
         if recipe.save
+          warm_image_variants(recipe) if attrs.key?(:image)
           render json: { data: serialize_recipe(recipe, full: true) }, status: :created
         else
           render_validation_errors(recipe)
@@ -124,6 +125,7 @@ module Api
           if remove_image && !attrs.key?(:image) && @recipe.image.attached?
             @recipe.image.purge
           end
+          warm_image_variants(@recipe) if attrs.key?(:image)
           render json: { data: serialize_recipe(@recipe.reload, full: true) }
         else
           render_validation_errors(@recipe)
@@ -275,6 +277,15 @@ module Api
           end
           recipe_params_input[key] = parsed
         end
+      end
+
+      # Pre-warms the recipe's thumb + detail variants in the background so
+      # the first user to hit the variant URL doesn't pay the (R2 download
+      # → ImageMagick convert → stream) cost. Called after a successful
+      # save where an image was attached. Safe to enqueue redundantly —
+      # `.processed` is idempotent.
+      def warm_image_variants(recipe)
+        WarmRecipeImageVariantsJob.perform_later(recipe.id)
       end
 
       # Splits controller-level intents off from the standard recipe attributes:
