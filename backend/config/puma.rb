@@ -36,6 +36,7 @@ end
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
-# Specify the PID file. Defaults to tmp/pids/server.pid in development.
-# In other environments, only set the PID file if requested.
-pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
+# Always write a pidfile so deploy scripts can reliably target the master
+# (e.g. for full restarts that pick up application.yml/initializer changes
+# that a phased restart wouldn't). Override with PIDFILE if needed.
+pidfile ENV.fetch("PIDFILE", "tmp/pids/server.pid")
