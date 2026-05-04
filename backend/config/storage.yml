@@ -21,3 +21,10 @@ cloudflare_r2:
   endpoint: <%= "https://#{ENV["CLOUDFLARE_R2_ACCOUNT_ID"]}.r2.cloudflarestorage.com" if ENV["CLOUDFLARE_R2_ACCOUNT_ID"].present? %>
   region: auto
   force_path_style: true
+  # aws-sdk-s3 1.180+ defaults send multiple "flexible checksum" headers per
+  # request (Content-MD5 + CRC32 + ...). Real AWS S3 accepts that; Cloudflare
+  # R2 rejects with "You can only specify one non-default checksum at a
+  # time." Tell the client to only emit checksums when the operation strictly
+  # requires one.
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
